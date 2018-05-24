@@ -123,7 +123,7 @@ public class AppleSingle {
 		int resourceForkOffset = prodosFileInfoOffset + 8;
 		int dataForkOffset = resourceForkOffset + (hasResourceFork ? resourceFork.length : 0);
 		
-		writeFileHeader(outputStream);
+		writeFileHeader(outputStream, entries);
 		writeHeader(outputStream, 3, realNameOffset, realName.length());
 		writeHeader(outputStream, 11, prodosFileInfoOffset, 8);
 		if (hasResourceFork) writeHeader(outputStream, 2, resourceForkOffset, resourceFork.length);
@@ -145,17 +145,20 @@ public class AppleSingle {
 		}
 	}
 	
-	private void writeFileHeader(OutputStream outputStream) throws IOException {
-		ByteBuffer buf = ByteBuffer.allocate(24).order(ByteOrder.BIG_ENDIAN);
-		buf.putLong(MAGIC_NUMBER);
-		buf.putLong(VERSION_NUMBER);
+	private void writeFileHeader(OutputStream outputStream, int numberOfEntries) throws IOException {
+		final byte[] filler = new byte[16];
+		ByteBuffer buf = ByteBuffer.allocate(26).order(ByteOrder.BIG_ENDIAN);
+		buf.putInt(MAGIC_NUMBER);
+		buf.putInt(VERSION_NUMBER);
+		buf.put(filler);
+		buf.putShort((short)numberOfEntries);
 		outputStream.write(buf.array());
 	}
 	private void writeHeader(OutputStream outputStream, int entryId, int offset, int length) throws IOException {
 		ByteBuffer buf = ByteBuffer.allocate(12).order(ByteOrder.BIG_ENDIAN);
-		buf.putLong(entryId);
-		buf.putLong(offset);
-		buf.putLong(length);
+		buf.putInt(entryId);
+		buf.putInt(offset);
+		buf.putInt(length);
 		outputStream.write(buf.array());
 	}
 	private void writeRealName(OutputStream outputStream) throws IOException {
@@ -165,7 +168,7 @@ public class AppleSingle {
 		ByteBuffer buf = ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN);
 		buf.putShort((short)prodosFileInfo.access);
 		buf.putShort((short)prodosFileInfo.fileType);
-		buf.putLong(prodosFileInfo.fileType);
+		buf.putInt(prodosFileInfo.fileType);
 		outputStream.write(buf.array());
 	}
 	private void writeResourceFork(OutputStream outputStream) throws IOException {
