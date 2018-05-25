@@ -14,7 +14,7 @@ public class ProdosFileInfo {
 	int auxType;
 	
 	public static ProdosFileInfo standardBIN() {
-		return new ProdosFileInfo(0xc3, 0x04, 0x000);
+		return new ProdosFileInfo(0xc3, 0x06, 0x0000);
 	}
 	
 	public ProdosFileInfo(int access, int fileType, int auxType) {

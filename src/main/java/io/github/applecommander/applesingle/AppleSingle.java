@@ -114,22 +114,22 @@ public class AppleSingle {
 	}
 	
 	public void save(OutputStream outputStream) throws IOException {
-		// Support real name, prodos file info, resource fork (if present), data fork (assumed)
 		final boolean hasResourceFork = resourceFork == null ? false : true;
-		final int entries = 3 + (hasResourceFork ? 1 : 0);
+		final boolean hasRealName = realName == null ? false : true;
+		final int entries = 2 + (hasRealName ? 1 : 0) + (hasResourceFork ? 1 : 0);
 
-		int realNameOffset = 26 + (12 * entries);;
-		int prodosFileInfoOffset = realNameOffset + realName.length();
+		int realNameOffset = 26 + (12 * entries);
+		int prodosFileInfoOffset = realNameOffset + (hasRealName ? realName.length() : 0);
 		int resourceForkOffset = prodosFileInfoOffset + 8;
 		int dataForkOffset = resourceForkOffset + (hasResourceFork ? resourceFork.length : 0);
 		
 		writeFileHeader(outputStream, entries);
-		writeHeader(outputStream, 3, realNameOffset, realName.length());
+		if (hasRealName) writeHeader(outputStream, 3, realNameOffset, realName.length());
 		writeHeader(outputStream, 11, prodosFileInfoOffset, 8);
 		if (hasResourceFork) writeHeader(outputStream, 2, resourceForkOffset, resourceFork.length);
 		writeHeader(outputStream, 1, dataForkOffset, dataFork.length);
 		
-		writeRealName(outputStream);
+		if (hasRealName) writeRealName(outputStream);
 		writeProdosFileInfo(outputStream);
 		if (hasResourceFork) writeResourceFork(outputStream);
 		writeDataFork(outputStream);
@@ -168,7 +168,7 @@ public class AppleSingle {
 		ByteBuffer buf = ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN);
 		buf.putShort((short)prodosFileInfo.access);
 		buf.putShort((short)prodosFileInfo.fileType);
-		buf.putInt(prodosFileInfo.fileType);
+		buf.putInt(prodosFileInfo.auxType);
 		outputStream.write(buf.array());
 	}
 	private void writeResourceFork(OutputStream outputStream) throws IOException {
@@ -179,22 +179,15 @@ public class AppleSingle {
 	}
 
 	public static AppleSingle read(InputStream inputStream) throws IOException {
-		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-		while (true) {
-			byte[] buf = new byte[1024];
-			int len = inputStream.read(buf);
-			if (len == -1) break;
-			outputStream.write(buf, 0, len);
-		}
-		outputStream.flush();
-		return read(outputStream.toByteArray());
+		Objects.requireNonNull(inputStream, "Please supply an input stream");
+		return read(AppleSingle.toByteArray(inputStream));
 	}
 	public static AppleSingle read(File file) throws IOException {
-		Objects.requireNonNull(file);
+		Objects.requireNonNull(file, "Please supply a file");
 		return read(file.toPath());
 	}
 	public static AppleSingle read(Path path) throws IOException {
-		Objects.requireNonNull(path);
+		Objects.requireNonNull(path, "Please supply a file");
 		return new AppleSingle(Files.readAllBytes(path));
 	}
 	public static AppleSingle read(byte[] data) throws IOException {
@@ -208,8 +201,21 @@ public class AppleSingle {
 	public static class Builder {
 		private AppleSingle as = new AppleSingle();
 		public Builder realName(String realName) {
-			as.realName = realName;
+			if (!Character.isAlphabetic(realName.charAt(0))) {
+				throw new IllegalArgumentException("ProDOS file names must begin with a letter");
+			}
+			as.realName = realName.chars()
+					.map(this::sanitize)
+					.limit(15)
+					.collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
+					.toString();
 			return this;
+		}
+		private int sanitize(int ch) {
+			if (Character.isAlphabetic(ch) || Character.isDigit(ch)) {
+				return Character.toUpperCase(ch);
+			}
+			return '.';
 		}
 		public Builder dataFork(byte[] dataFork) {
 			as.dataFork = dataFork;
@@ -234,5 +240,18 @@ public class AppleSingle {
 		public AppleSingle build() {
 			return as;
 		}
+	}
+
+	/** Utility method to read all bytes from an InputStream. May move if more utility methods appear. */
+	public static byte[] toByteArray(InputStream inputStream) throws IOException {
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+		while (true) {
+			byte[] buf = new byte[1024];
+			int len = inputStream.read(buf);
+			if (len == -1) break;
+			outputStream.write(buf, 0, len);
+		}
+		outputStream.flush();
+		return outputStream.toByteArray();
 	}
 }

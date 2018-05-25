@@ -39,7 +39,7 @@ public class AppleSingleTest {
 				.realName(realName)
 				.build();
 		assertNotNull(createdAS);
-		assertEquals(realName, createdAS.getRealName());
+		assertEquals(realName.toUpperCase(), createdAS.getRealName());
 		assertArrayEquals(dataFork, createdAS.getDataFork());
 		assertNull(createdAS.getResourceFork());
 		assertNotNull(createdAS.getProdosFileInfo());
@@ -50,9 +50,26 @@ public class AppleSingleTest {
 		
 		AppleSingle readAS = AppleSingle.read(actualBytes.toByteArray());
 		assertNotNull(readAS);
-		assertEquals(realName, readAS.getRealName());
+		assertEquals(realName.toUpperCase(), readAS.getRealName());
 		assertArrayEquals(dataFork, readAS.getDataFork());
 		assertNull(readAS.getResourceFork());
 		assertNotNull(readAS.getProdosFileInfo());
+	}
+	
+	@Test
+	public void testProdosFileNameLengthRequirements() {
+		AppleSingle as = AppleSingle.builder().realName("superlongnamethatneedstobetruncated").build();
+		assertEquals(15, as.getRealName().length());
+	}
+	
+	@Test
+	public void testProdosFileNameCharacterRequirements() {
+		AppleSingle as = AppleSingle.builder().realName("bad-~@").build();
+		assertEquals("BAD...", as.getRealName());
+	}
+	
+	@Test(expected = IllegalArgumentException.class)
+	public void testProdosFileNameFirstCharacter() {
+		AppleSingle.builder().realName("1st-file").build();
 	}
 }

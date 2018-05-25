@@ -1,3 +1,7 @@
+plugins {
+    id 'org.springframework.boot' version '2.0.2.RELEASE'
+}
+
 apply plugin: 'java'
 apply plugin: 'application'
 apply plugin: 'maven'
@@ -7,7 +11,18 @@ repositories {
     jcenter()
 }
 
-dependencies {
-    testImplementation 'junit:junit:4.12'
+mainClassName = "io.github.applecommander.applesingle.tools.asu.Main"
+
+bootJar {
+  manifest {
+    attributes(
+      'Implementation-Title': 'applesingle',
+      'Implementation-Version': "${version} (${new Date().format('yyyy-MM-dd HH:mm')})" 
+    )
+  }
 }
 
+dependencies {
+    compile 'info.picocli:picocli:3.0.2'
+    testImplementation 'junit:junit:4.12'
+}
