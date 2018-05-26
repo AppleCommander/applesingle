@@ -2,6 +2,28 @@
 
 Usage is catered to the factory methods and builder.  Some sample are included below.
 
+## Maven / Gradle
+
+To include in a Maven project:
+
+```xml
+<dependency>
+    <groupId>net.sf.applecommander</groupId>
+    <artifactId>applesingle</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
+To include in a Gradle project:
+
+```groovy
+dependencies {
+    // ...
+    compile "net.sf.applecommander:applesingle:1.0.0"
+    // ...
+}
+```
+
 ## Read AppleSingle
 
 Use the factory method to...
