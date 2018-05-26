@@ -1,1 +1,6 @@
+include 'api'
+include 'tools:asu'
+
 rootProject.name = 'applesingle'
+project(":api").name = 'applesingle-api'
+project(":tools:asu").name = 'applesingle-tools-asu'
