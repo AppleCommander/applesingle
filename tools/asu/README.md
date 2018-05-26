@@ -98,3 +98,19 @@ $ echo "Hello World!" | asu create --name my-text-file --stdout --filetype txt -
 00000050  00 00 48 65 6c 6c 6f 20  57 6f 72 6c 64 21 0a     |..Hello World!.|
 0000005f
 ```
+
+## Integration with 'ac'
+
+Create a disk, generate an AppleSingle text file, import into the ProDOS image, and then export the file to stdout.
+
+```shell
+$ ac -pro140 demo.dsk demo
+$ echo "Hello World!" | asu create --stdout --filetype txt --stdin-fork=data --fix-text | ac -as demo.dsk MY.TEXT.FILE
+$ ac -l demo.dsk 
+demo.dsk /DEMO/
+  MY.TEXT.FILE TXT 001 05/26/2018 05/26/2018 13  
+ProDOS format; 139,264 bytes free; 4,096 bytes used.
+
+$ ac -e demo.dsk MY.TEXT.FILE
+Hello World!
+```
