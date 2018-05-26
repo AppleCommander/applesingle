@@ -42,7 +42,7 @@ public class CreateCommand implements Callable<Void> {
 	@Option(names = "--access", description = "Set the ProDOS access flags", converter = IntegerTypeConverter.class)
 	private Integer access;
 	
-	@Option(names = "--filetype", description = "Set the ProDOS file type", converter = IntegerTypeConverter.class)
+	@Option(names = "--filetype", description = "Set the ProDOS file type (also accepts BIN/BAS/SYS)", converter = ProdosFileTypeConverter.class)
 	private Integer filetype;
 	
 	@Option(names = "--auxtype", description = "Set the ProDOS auxtype", converter = IntegerTypeConverter.class)

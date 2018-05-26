@@ -75,7 +75,7 @@ Resource Fork: Not present
 The `--fix-text` flag flips the high-bit and translates the newline character:
 
 ```shell
-$ echo "Hello World!" | asu create --name my-text-file --stdout --filetype 0x04 --stdin-fork=data --fix-text | hexdump -C
+$ echo "Hello World!" | asu create --name my-text-file --stdout --filetype txt --stdin-fork=data --fix-text | hexdump -C
 00000000  00 05 16 00 00 02 00 00  00 00 00 00 00 00 00 00  |................|
 00000010  00 00 00 00 00 00 00 00  00 03 00 00 00 03 00 00  |................|
 00000020  00 3e 00 00 00 0c 00 00  00 0b 00 00 00 4a 00 00  |.>...........J..|
@@ -89,7 +89,7 @@ $ echo "Hello World!" | asu create --name my-text-file --stdout --filetype 0x04 
 Without the `--fix-text` flag:
 
 ```shell
-$ echo "Hello World!" | asu create --name my-text-file --stdout --filetype 0x04 --stdin-fork=data | hexdump -C
+$ echo "Hello World!" | asu create --name my-text-file --stdout --filetype txt --stdin-fork=data | hexdump -C
 00000000  00 05 16 00 00 02 00 00  00 00 00 00 00 00 00 00  |................|
 00000010  00 00 00 00 00 00 00 00  00 03 00 00 00 03 00 00  |................|
 00000020  00 3e 00 00 00 0c 00 00  00 0b 00 00 00 4a 00 00  |.>...........J..|
