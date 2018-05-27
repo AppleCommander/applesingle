@@ -66,7 +66,7 @@ public class AppleSingle {
 			byte[] entryData = new byte[length];
 			buffer.get(entryData);
 			// Defer to the proper set method or crash if we don't support that type of entry
-			Optional.of(entryConsumers.get(entryId))
+			Optional.ofNullable(entryConsumers.get(entryId))
 				.orElseThrow(() -> new IOException(String.format("Unknown entry type of %04X", entryId)))
 				.accept(entryData);
 			buffer.reset();
