@@ -9,7 +9,7 @@ To include in a Maven project:
 ```xml
 <dependency>
     <groupId>net.sf.applecommander</groupId>
-    <artifactId>applesingle</artifactId>
+    <artifactId>applesingle-api</artifactId>
     <version>1.0.0</version>
 </dependency>
 ```
@@ -19,7 +19,7 @@ To include in a Gradle project:
 ```groovy
 dependencies {
     // ...
-    compile "net.sf.applecommander:applesingle:1.0.0"
+    compile "net.sf.applecommander:applesingle-api:1.0.0"
     // ...
 }
 ```
