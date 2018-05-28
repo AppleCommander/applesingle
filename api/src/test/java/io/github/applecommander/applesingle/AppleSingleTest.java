@@ -7,6 +7,8 @@ import static org.junit.Assert.assertNull;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 import org.junit.Test;
 
@@ -32,11 +34,14 @@ public class AppleSingleTest {
 	public void testCreateAndReadAppleSingle() throws IOException {
 		final byte[] dataFork = "testing testing 1-2-3".getBytes();
 		final String realName = "test.as";
+		// Need to truncate to seconds as the AppleSingle format is only good to seconds!
+		final Instant instant = Instant.now().truncatedTo(ChronoUnit.SECONDS);
 		
 		// Using default ProDOS info and skipping resource fork
 		AppleSingle createdAS = AppleSingle.builder()
 				.dataFork(dataFork)
 				.realName(realName)
+				.allDates(instant)
 				.build();
 		assertNotNull(createdAS);
 		assertEquals(realName.toUpperCase(), createdAS.getRealName());
@@ -54,6 +59,11 @@ public class AppleSingleTest {
 		assertArrayEquals(dataFork, readAS.getDataFork());
 		assertNull(readAS.getResourceFork());
 		assertNotNull(readAS.getProdosFileInfo());
+		assertNotNull(readAS.getFileDatesInfo());
+		assertEquals(instant, readAS.getFileDatesInfo().getCreationInstant());
+		assertEquals(instant, readAS.getFileDatesInfo().getModificationInstant());
+		assertEquals(instant, readAS.getFileDatesInfo().getAccessInstant());
+		assertEquals(instant, readAS.getFileDatesInfo().getBackupInstant());
 	}
 	
 	@Test

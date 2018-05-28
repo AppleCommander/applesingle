@@ -3,6 +3,9 @@ package io.github.applecommander.applesingle.tools.asu;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.time.Instant;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 
 import io.github.applecommander.applesingle.AppleSingle;
@@ -16,6 +19,10 @@ import picocli.CommandLine.Parameters;
 @Command(name = "create", description = { "Create an AppleSingle file" },
 		parameterListHeading = "%nParameters:%n",
 		descriptionHeading = "%n",
+		footerHeading = "%nNotes:%n",
+		footer = { "* Dates should be supplied like '2007-12-03T10:15:30.00Z'.",
+				   "* 'Known' ProDOS file types: TXT, BIN, INT, BAS, REL, SYS.",
+				   "* Include the output file or specify stdout" },
 		optionListHeading = "%nOptions:%n")
 public class CreateCommand implements Callable<Void> {
 	@Option(names = { "-h", "--help" }, description = "Show help for subcommand", usageHelp = true)
@@ -42,11 +49,20 @@ public class CreateCommand implements Callable<Void> {
 	@Option(names = "--access", description = "Set the ProDOS access flags", converter = IntegerTypeConverter.class)
 	private Integer access;
 	
-	@Option(names = "--filetype", description = "Set the ProDOS file type (also accepts BIN/BAS/SYS)", converter = ProdosFileTypeConverter.class)
+	@Option(names = "--filetype", description = "Set the ProDOS file type", converter = ProdosFileTypeConverter.class)
 	private Integer filetype;
 	
 	@Option(names = "--auxtype", description = "Set the ProDOS auxtype", converter = IntegerTypeConverter.class)
 	private Integer auxtype;
+	
+	@Option(names = "--creation-date", description = "Set the file creation date")
+	private Instant creationDate;
+	@Option(names = "--modification-date", description = "Set the file modification date")
+	private Instant modificationDate;
+	@Option(names = "--backup-date", description = "Set the file backup date")
+	private Instant backupDate;
+	@Option(names = "--access-date", description = "Set the file access date")
+	private Instant accessDate;
 
 	@Parameters(arity = "0..1", description = "AppleSingle file to create")
 	private Path file;
@@ -107,7 +123,7 @@ public class CreateCommand implements Callable<Void> {
 		return resourceFork;
 	}
 	
-	public AppleSingle buildAppleSingle(byte[] dataFork, byte[] resourceFork) {
+	public AppleSingle buildAppleSingle(byte[] dataFork, byte[] resourceFork) throws IOException {
 		AppleSingle.Builder builder = AppleSingle.builder();
 		if (realName != null) {
 			builder.realName(realName);
@@ -120,6 +136,18 @@ public class CreateCommand implements Callable<Void> {
 		if (auxtype != null) builder.auxType(auxtype.intValue());
 		if (dataFork != null) builder.dataFork(dataFork);
 		if (resourceFork != null) builder.resourceFork(resourceFork);
+		
+		if (dataForkFile != null || resourceForkFile != null) {
+			Path path = Optional.ofNullable(dataForkFile).orElse(resourceForkFile);
+			BasicFileAttributes attribs = Files.readAttributes(path, BasicFileAttributes.class);
+			builder.creationDate(attribs.creationTime().toInstant());
+			builder.modificationDate(attribs.lastModifiedTime().toInstant());
+			builder.accessDate(attribs.lastAccessTime().toInstant());
+		}
+		if (creationDate != null) builder.creationDate(creationDate);
+		if (modificationDate != null) builder.modificationDate(modificationDate);
+		if (backupDate != null) builder.backupDate(backupDate);
+		if (accessDate != null) builder.accessDate(accessDate);
 		
 		return builder.build();
 	}

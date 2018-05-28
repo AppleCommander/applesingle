@@ -10,6 +10,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -31,13 +32,34 @@ import java.util.function.Consumer;
  */
 public class AppleSingle {
 	public static final int MAGIC_NUMBER = 0x0051600;
-	public static final int VERSION_NUMBER = 0x00020000;
-
+	public static final int VERSION_NUMBER1 = 0x00010000;
+	public static final int VERSION_NUMBER2 = 0x00020000;
+	public static final Map<Integer,String> ENTRY_TYPE_NAMES = new HashMap<Integer,String>() {
+		private static final long serialVersionUID = 7142066556402030814L;
+	{
+		put(1, "Data Fork");
+		put(2, "Resource Fork");
+		put(3, "Real Name");
+		put(4, "Comment");
+		put(5, "Icon, B&W");
+		put(6, "Icon, Color");
+		put(7, "File Info");
+		put(8, "File Dates Info");
+		put(9, "Finder Info");
+		put(10, "Macintosh File Info");
+		put(11, "ProDOS File Info");
+		put(12, "MS-DOS File Info");
+		put(13, "Short Name");
+		put(14, "AFP File Info");
+		put(15, "Directory ID");
+	}};
+	
 	private Map<Integer,Consumer<byte[]>> entryConsumers = new HashMap<>();
 	{
 		entryConsumers.put(1, this::setDataFork);
 		entryConsumers.put(2, this::setResourceFork);
 		entryConsumers.put(3, this::setRealName);
+		entryConsumers.put(8, this::setFileDatesInfo);
 		entryConsumers.put(11, this::setProdosFileInfo);
 	}
 	
@@ -45,6 +67,7 @@ public class AppleSingle {
 	private byte[] resourceFork;
 	private String realName;
 	private ProdosFileInfo prodosFileInfo = ProdosFileInfo.standardBIN();
+	private FileDatesInfo fileDatesInfo = new FileDatesInfo();
 
 	private AppleSingle() {
 		// Allow Builder construction
@@ -54,7 +77,7 @@ public class AppleSingle {
 				.order(ByteOrder.BIG_ENDIAN)
 				.asReadOnlyBuffer();
 		required(buffer, MAGIC_NUMBER, "Not an AppleSingle file - magic number does not match.");
-		required(buffer, VERSION_NUMBER, "Only AppleSingle version 2 supported.");
+		required(buffer, VERSION_NUMBER2, "Only AppleSingle version 2 supported.");
 		buffer.position(buffer.position() + 16);	// Skip filler
 		int entries = buffer.getShort();
 		for (int i = 0; i < entries; i++) {
@@ -67,7 +90,8 @@ public class AppleSingle {
 			buffer.get(entryData);
 			// Defer to the proper set method or crash if we don't support that type of entry
 			Optional.ofNullable(entryConsumers.get(entryId))
-				.orElseThrow(() -> new IOException(String.format("Unknown entry type of %04X", entryId)))
+				.orElseThrow(() -> new IOException(String.format("Unsupported entry type of %04X (%s)", entryId, 
+						ENTRY_TYPE_NAMES.getOrDefault(entryId, "Unknown"))))
 				.accept(entryData);
 			buffer.reset();
 		}
@@ -99,6 +123,16 @@ public class AppleSingle {
 		int auxType = infoData.getInt();
 		this.prodosFileInfo = new ProdosFileInfo(access, fileType, auxType);
 	}
+	private void setFileDatesInfo(byte[] entryData) {
+		ByteBuffer infoData = ByteBuffer.wrap(entryData)
+				.order(ByteOrder.BIG_ENDIAN)
+				.asReadOnlyBuffer();
+		int creation = infoData.getInt();
+		int modification = infoData.getInt();
+		int backup = infoData.getInt();
+		int access = infoData.getInt();
+		this.fileDatesInfo = new FileDatesInfo(creation, modification, backup, access);
+	}
 	
 	public byte[] getDataFork() {
 		return dataFork;
@@ -112,25 +146,31 @@ public class AppleSingle {
 	public ProdosFileInfo getProdosFileInfo() {
 		return prodosFileInfo;
 	}
+	public FileDatesInfo getFileDatesInfo() {
+		return fileDatesInfo;
+	}
 	
 	public void save(OutputStream outputStream) throws IOException {
-		final boolean hasResourceFork = resourceFork == null ? false : true;
-		final boolean hasRealName = realName == null ? false : true;
-		final int entries = 2 + (hasRealName ? 1 : 0) + (hasResourceFork ? 1 : 0);
+		final boolean hasResourceFork = Objects.nonNull(resourceFork);
+		final boolean hasRealName = Objects.nonNull(realName);
+		final int entries = 3 + (hasRealName ? 1 : 0) + (hasResourceFork ? 1 : 0);
 
 		int realNameOffset = 26 + (12 * entries);
 		int prodosFileInfoOffset = realNameOffset + (hasRealName ? realName.length() : 0);
-		int resourceForkOffset = prodosFileInfoOffset + 8;
+		int fileDatesInfoOffset = prodosFileInfoOffset + 8;
+		int resourceForkOffset = fileDatesInfoOffset + 16;
 		int dataForkOffset = resourceForkOffset + (hasResourceFork ? resourceFork.length : 0);
 		
 		writeFileHeader(outputStream, entries);
 		if (hasRealName) writeHeader(outputStream, 3, realNameOffset, realName.length());
 		writeHeader(outputStream, 11, prodosFileInfoOffset, 8);
+		writeHeader(outputStream, 8, fileDatesInfoOffset, 16);
 		if (hasResourceFork) writeHeader(outputStream, 2, resourceForkOffset, resourceFork.length);
 		writeHeader(outputStream, 1, dataForkOffset, dataFork.length);
 		
 		if (hasRealName) writeRealName(outputStream);
 		writeProdosFileInfo(outputStream);
+		writeFileDatesInfo(outputStream);
 		if (hasResourceFork) writeResourceFork(outputStream);
 		writeDataFork(outputStream);
 	}
@@ -149,7 +189,7 @@ public class AppleSingle {
 		final byte[] filler = new byte[16];
 		ByteBuffer buf = ByteBuffer.allocate(26).order(ByteOrder.BIG_ENDIAN);
 		buf.putInt(MAGIC_NUMBER);
-		buf.putInt(VERSION_NUMBER);
+		buf.putInt(VERSION_NUMBER2);
 		buf.put(filler);
 		buf.putShort((short)numberOfEntries);
 		outputStream.write(buf.array());
@@ -169,6 +209,14 @@ public class AppleSingle {
 		buf.putShort((short)prodosFileInfo.access);
 		buf.putShort((short)prodosFileInfo.fileType);
 		buf.putInt(prodosFileInfo.auxType);
+		outputStream.write(buf.array());
+	}
+	private void writeFileDatesInfo(OutputStream outputStream) throws IOException {
+		ByteBuffer buf = ByteBuffer.allocate(16).order(ByteOrder.BIG_ENDIAN);
+		buf.putInt(fileDatesInfo.getCreation());
+		buf.putInt(fileDatesInfo.getModification());
+		buf.putInt(fileDatesInfo.getBackup());
+		buf.putInt(fileDatesInfo.getAccess());
 		outputStream.write(buf.array());
 	}
 	private void writeResourceFork(OutputStream outputStream) throws IOException {
@@ -236,6 +284,41 @@ public class AppleSingle {
 		public Builder auxType(int auxType) {
 			as.prodosFileInfo.auxType = auxType;
 			return this;
+		}
+		public Builder creationDate(int creation) {
+			as.fileDatesInfo.creation = creation;
+			return this;
+		}
+		public Builder creationDate(Instant creation) {
+			as.fileDatesInfo.creation = FileDatesInfo.fromInstant(creation);
+			return this;
+		}
+		public Builder modificationDate(int modification) {
+			as.fileDatesInfo.modification = modification;
+			return this;
+		}
+		public Builder modificationDate(Instant modification) {
+			as.fileDatesInfo.modification = FileDatesInfo.fromInstant(modification);
+			return this;
+		}
+		public Builder backupDate(int backup) {
+			as.fileDatesInfo.backup = backup;
+			return this;
+		}
+		public Builder backupDate(Instant backup) {
+			as.fileDatesInfo.backup = FileDatesInfo.fromInstant(backup);
+			return this;
+		}
+		public Builder accessDate(int access) {
+			as.fileDatesInfo.access = access;
+			return this;
+		}
+		public Builder accessDate(Instant access) {
+			as.fileDatesInfo.access = FileDatesInfo.fromInstant(access);
+			return this;
+		}
+		public Builder allDates(Instant instant) {
+			return creationDate(instant).modificationDate(instant).backupDate(instant).accessDate(instant);
 		}
 		public AppleSingle build() {
 			return as;
