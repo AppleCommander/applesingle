@@ -4,13 +4,13 @@ For the included command-line utility, we are using `asu` for the name.
 `as` is the GNU Assembler while `applesingle` is already on Macintoshes.
 Hopefully that will prevent some confusion!
 
-Note that all runs are with the `asu` alias defined as `alias asu='java -jar build/libs/applesingle-1.0.0.jar'`
+Note that all runs are with the `asu` alias defined as `alias asu='java -jar build/libs/applesingle-1.2.0.jar'`
 (adjust as necessary).
 
 ## Basic usage
 
 ```shell
-$ asu
+$ asu --help
 Usage: asu [-hV] [--debug] [COMMAND]
 
 AppleSingle utility
@@ -21,10 +21,12 @@ Options:
   -V, --version   Print version information and exit.
 
 Commands:
-  help     Displays help information about the specified command
-  info     Display information about an AppleSingle file
+  analyze  Perform an analysis on an AppleSingle file
   create   Create an AppleSingle file
   extract  Extract contents of an AppleSingle file
+  filter   Filter an AppleSingle file
+  help     Displays help information about the specified command
+  info     Display information about an AppleSingle file
 ```
 
 ## Subcommand help

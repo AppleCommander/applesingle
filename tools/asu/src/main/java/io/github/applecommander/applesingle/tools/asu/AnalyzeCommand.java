@@ -54,7 +54,7 @@ public class AnalyzeCommand implements Callable<Void> {
 		List<IntRange> used = new ArrayList<>();
 		HexDumper dumper = HexDumper.standard();
 		AppleSingleReader reader = AppleSingleReader.builder(fileData)
-				.readAtReporter((start,b,d) -> used.add(IntRange.of(start, start + b.length)))
+				.readAtReporter((start,chunk,desc) -> used.add(IntRange.of(start, start + chunk.length)))
 				.readAtReporter((start,chunk,desc) -> dumper.dump(start, chunk, desc))
 				.versionReporter(this::reportVersion)
 				.numberOfEntriesReporter(this::reportNumberOfEntries)

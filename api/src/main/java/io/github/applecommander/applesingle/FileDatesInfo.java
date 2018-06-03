@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.util.function.IntSupplier;
 
 public class FileDatesInfo {
-	/** The number of seconds at the begining of the AppleSingle date epoch since the Unix epoch began. */
+	/** The number of seconds at the beginning of the AppleSingle date epoch since the Unix epoch began. */
 	public static final Instant EPOCH_INSTANT = Instant.parse("2000-01-01T00:00:00.00Z");
 	/** Per the AppleSingle technical notes. */
 	public static final int UNKNOWN_DATE = 0x80000000;

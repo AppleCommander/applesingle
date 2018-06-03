@@ -6,6 +6,9 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Objects;
 
+/**
+ * Represents an AppleSingle entry.
+ */
 public class Entry {
 	public static final int BYTES = 12;
 	private int entryId;

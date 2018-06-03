@@ -111,6 +111,10 @@ public class AppleSingle {
 		}
 	}
 	
+	/** 
+	 * Common write capability for an AppleSingle.  Also can be used by external entities to 
+	 * write a properly formatted AppleSingle file without the ProDOS assumptions of AppleSingle. 
+	 */
 	public static void write(OutputStream outputStream, List<Entry> entries) throws IOException {
 		final byte[] filler = new byte[16];
 		ByteBuffer buf = ByteBuffer.allocate(26).order(ByteOrder.BIG_ENDIAN);
