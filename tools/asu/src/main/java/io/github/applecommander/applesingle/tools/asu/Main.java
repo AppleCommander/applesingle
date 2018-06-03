@@ -15,7 +15,14 @@ import picocli.CommandLine.Option;
 	commandListHeading = "%nCommands:%n",
 	optionListHeading = "%nOptions:%n",
 	description = "AppleSingle utility", 
-	subcommands = { HelpCommand.class, InfoCommand.class, AnalyzeCommand.class, CreateCommand.class, ExtractCommand.class })
+	subcommands = { 
+			AnalyzeCommand.class, 
+			CreateCommand.class, 
+			ExtractCommand.class,
+			FilterCommand.class,
+			HelpCommand.class, 
+			InfoCommand.class, 
+			})
 public class Main implements Runnable {
 	@Option(names = "--debug", description = "Dump full stack trackes if an error occurs")
 	private static boolean debugFlag;

@@ -27,6 +27,7 @@ import java.util.function.Consumer;
  * 1. Data Fork<br/>
  * 2. Resource Fork<br/>
  * 3. Real Name<br/>
+ * 8. File Dates Info<br/>
  * 11. ProDOS File Info<br/>
  * 
  * @see <a href="https://github.com/AppleCommander/AppleCommander/issues/20">AppleCommander issue #20</a>
@@ -80,28 +81,24 @@ public class AppleSingle {
 	}
 	
 	public void save(OutputStream outputStream) throws IOException {
-		final boolean hasResourceFork = Objects.nonNull(resourceFork);
-		final boolean hasRealName = Objects.nonNull(realName);
-		final int entries = 3 + (hasRealName ? 1 : 0) + (hasResourceFork ? 1 : 0);
-
-		int realNameOffset = 26 + (12 * entries);
-		int prodosFileInfoOffset = realNameOffset + (hasRealName ? realName.length() : 0);
-		int fileDatesInfoOffset = prodosFileInfoOffset + 8;
-		int resourceForkOffset = fileDatesInfoOffset + 16;
-		int dataForkOffset = resourceForkOffset + (hasResourceFork ? resourceFork.length : 0);
-		
-		writeFileHeader(outputStream, entries);
-		if (hasRealName) writeHeader(outputStream, 3, realNameOffset, realName.length());
-		writeHeader(outputStream, 11, prodosFileInfoOffset, 8);
-		writeHeader(outputStream, 8, fileDatesInfoOffset, 16);
-		if (hasResourceFork) writeHeader(outputStream, 2, resourceForkOffset, resourceFork.length);
-		writeHeader(outputStream, 1, dataForkOffset, dataFork.length);
-		
-		if (hasRealName) writeRealName(outputStream);
-		writeProdosFileInfo(outputStream);
-		writeFileDatesInfo(outputStream);
-		if (hasResourceFork) writeResourceFork(outputStream);
-		writeDataFork(outputStream);
+		List<Entry> entries = new ArrayList<>();
+		Optional.ofNullable(this.realName)
+				.map(String::getBytes)
+				.map(b -> Entry.create(EntryType.REAL_NAME, b))
+				.ifPresent(entries::add);
+		Optional.ofNullable(this.prodosFileInfo)
+				.map(ProdosFileInfo::toEntry)
+				.ifPresent(entries::add);
+		Optional.ofNullable(this.fileDatesInfo)
+				.map(FileDatesInfo::toEntry)
+				.ifPresent(entries::add);
+		Optional.ofNullable(this.resourceFork)
+				.map(b -> Entry.create(EntryType.RESOURCE_FORK, b))
+				.ifPresent(entries::add);
+		Optional.ofNullable(this.dataFork)
+				.map(b -> Entry.create(EntryType.DATA_FORK, b))
+				.ifPresent(entries::add);
+		write(outputStream, entries);
 	}
 	public void save(File file) throws IOException {
 		try (FileOutputStream outputStream = new FileOutputStream(file)) {
@@ -114,46 +111,24 @@ public class AppleSingle {
 		}
 	}
 	
-	private void writeFileHeader(OutputStream outputStream, int numberOfEntries) throws IOException {
+	public static void write(OutputStream outputStream, List<Entry> entries) throws IOException {
 		final byte[] filler = new byte[16];
 		ByteBuffer buf = ByteBuffer.allocate(26).order(ByteOrder.BIG_ENDIAN);
 		buf.putInt(MAGIC_NUMBER);
 		buf.putInt(VERSION_NUMBER2);
 		buf.put(filler);
-		buf.putShort((short)numberOfEntries);
+		buf.putShort((short)entries.size());
 		outputStream.write(buf.array());
-	}
-	private void writeHeader(OutputStream outputStream, int entryId, int offset, int length) throws IOException {
-		ByteBuffer buf = ByteBuffer.allocate(12).order(ByteOrder.BIG_ENDIAN);
-		buf.putInt(entryId);
-		buf.putInt(offset);
-		buf.putInt(length);
-		outputStream.write(buf.array());
-	}
-	private void writeRealName(OutputStream outputStream) throws IOException {
-		outputStream.write(realName.getBytes());
-	}
-	private void writeProdosFileInfo(OutputStream outputStream) throws IOException {
-		ByteBuffer buf = ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN);
-		buf.putShort((short)prodosFileInfo.access);
-		buf.putShort((short)prodosFileInfo.fileType);
-		buf.putInt(prodosFileInfo.auxType);
-		outputStream.write(buf.array());
-	}
-	private void writeFileDatesInfo(OutputStream outputStream) throws IOException {
-		ByteBuffer buf = ByteBuffer.allocate(16).order(ByteOrder.BIG_ENDIAN);
-		buf.putInt(fileDatesInfo.getCreation());
-		buf.putInt(fileDatesInfo.getModification());
-		buf.putInt(fileDatesInfo.getBackup());
-		buf.putInt(fileDatesInfo.getAccess());
-		outputStream.write(buf.array());
-	}
-	private void writeResourceFork(OutputStream outputStream) throws IOException {
-		outputStream.write(resourceFork);
-	}
-	private void writeDataFork(OutputStream outputStream) throws IOException {
-		outputStream.write(dataFork);
-	}
+		
+		int offset = 26 + (Entry.BYTES * entries.size());
+		for (Entry entry : entries) {
+			entry.writeHeader(outputStream, offset);
+			offset += entry.getLength();
+		}
+		for (Entry entry : entries) {
+			entry.writeData(outputStream);
+		}
+	}	
 
 	public static AppleSingle read(InputStream inputStream) throws IOException {
 		Objects.requireNonNull(inputStream, "Please supply an input stream");
@@ -186,7 +161,7 @@ public class AppleSingle {
 	}
 	public static List<Entry> asEntries(byte[] data) throws IOException {
 		Objects.requireNonNull(data);
-		return asEntries(AppleSingleReader.builder().data(data).build());
+		return asEntries(AppleSingleReader.builder(data).build());
 	}
 	public static List<Entry> asEntries(AppleSingleReader reader) throws IOException {
 		Objects.requireNonNull(reader);

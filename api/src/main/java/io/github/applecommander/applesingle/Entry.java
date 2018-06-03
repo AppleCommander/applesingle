@@ -1,11 +1,13 @@
 package io.github.applecommander.applesingle;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Objects;
 
 public class Entry {
-	public static final int LENGTH = 12;
+	public static final int BYTES = 12;
 	private int entryId;
 	private int offset;
 	private int length;
@@ -14,7 +16,7 @@ public class Entry {
 	public static Entry create(AppleSingleReader reader) {
 		Objects.requireNonNull(reader);
 		
-		ByteBuffer buffer = reader.read(LENGTH, "Entry header");
+		ByteBuffer buffer = reader.read(BYTES, "Entry header");
 		Entry entry = new Entry();
 		entry.entryId = buffer.getInt();
 		entry.offset = buffer.getInt();
@@ -48,5 +50,17 @@ public class Entry {
 	}
 	public ByteBuffer getBuffer() {
 		return ByteBuffer.wrap(data).order(ByteOrder.BIG_ENDIAN).asReadOnlyBuffer();
+	}
+	
+	public void writeHeader(OutputStream outputStream, int offset) throws IOException {
+		this.offset = offset;
+		ByteBuffer buf = ByteBuffer.allocate(BYTES).order(ByteOrder.BIG_ENDIAN);
+		buf.putInt(this.entryId);
+		buf.putInt(this.offset);
+		buf.putInt(this.length);
+		outputStream.write(buf.array());
+	}
+	public void writeData(OutputStream outputStream) throws IOException {
+		outputStream.write(data);
 	}
 }

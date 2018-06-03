@@ -1,16 +1,19 @@
 package io.github.applecommander.applesingle;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.time.Instant;
 import java.util.function.IntSupplier;
 
 public class FileDatesInfo {
 	/** The number of seconds at the begining of the AppleSingle date epoch since the Unix epoch began. */
-	//public static final int EPOCH_2000 = 946684800;
 	public static final Instant EPOCH_INSTANT = Instant.parse("2000-01-01T00:00:00.00Z");
 	/** Per the AppleSingle technical notes. */
 	public static final int UNKNOWN_DATE = 0x80000000;
+	/** Number of bytes a File Dates Info takes per AppleSingle spec. */
+	public static final int BYTES = 16;
 
+	// Package scoped so AppleSingle Builder is able to set
 	int creation;
 	int modification;
 	int backup;
@@ -40,6 +43,15 @@ public class FileDatesInfo {
 		this.modification = modification;
 		this.backup = backup;
 		this.access = access;
+	}
+	
+	public Entry toEntry() {
+		ByteBuffer buf = ByteBuffer.allocate(BYTES).order(ByteOrder.BIG_ENDIAN);
+		buf.putInt(creation);
+		buf.putInt(modification);
+		buf.putInt(backup);
+		buf.putInt(access);
+		return Entry.create(EntryType.FILE_DATES_INFO, buf.array());
 	}
 	
 	public Instant getCreationInstant() {
