@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 
 import io.github.applecommander.applesingle.AppleSingle;
+import io.github.applecommander.applesingle.Utilities;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
@@ -99,7 +100,7 @@ public class CreateCommand implements Callable<Void> {
 	public byte[] prepDataFork() throws IOException {
 		byte[] dataFork = null;
 		if (stdinForkType == ForkType.data) {
-			dataFork = AppleSingle.toByteArray(System.in);
+			dataFork = Utilities.toByteArray(System.in);
 		} else if (dataForkFile != null) {
 			dataFork = Files.readAllBytes(dataForkFile);
 		}
@@ -116,7 +117,7 @@ public class CreateCommand implements Callable<Void> {
 	public byte[] prepResourceFork() throws IOException {
 		byte[] resourceFork = null;
 		if (stdinForkType == ForkType.resource) {
-			resourceFork = AppleSingle.toByteArray(System.in);
+			resourceFork = Utilities.toByteArray(System.in);
 		} else if (resourceForkFile != null) {
 			resourceFork = Files.readAllBytes(resourceForkFile);
 		}
