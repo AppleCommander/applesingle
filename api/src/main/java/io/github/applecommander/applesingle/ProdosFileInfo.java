@@ -1,5 +1,7 @@
 package io.github.applecommander.applesingle;
 
+import java.nio.ByteBuffer;
+
 import io.github.applecommander.applesingle.AppleSingle.Builder;
 
 /**
@@ -15,6 +17,13 @@ public class ProdosFileInfo {
 	
 	public static ProdosFileInfo standardBIN() {
 		return new ProdosFileInfo(0xc3, 0x06, 0x0000);
+	}
+	public static ProdosFileInfo fromEntry(Entry entry) {
+		ByteBuffer infoData = entry.getBuffer();
+		int access = infoData.getShort();
+		int fileType = infoData.getShort();
+		int auxType = infoData.getInt();
+		return new ProdosFileInfo(access, fileType, auxType);
 	}
 	
 	public ProdosFileInfo(int access, int fileType, int auxType) {

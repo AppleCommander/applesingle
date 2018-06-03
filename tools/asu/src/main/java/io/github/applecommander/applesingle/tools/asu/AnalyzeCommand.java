@@ -2,18 +2,23 @@ package io.github.applecommander.applesingle.tools.asu;
 
 import java.io.IOException;
 import java.io.PrintStream;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.function.BiConsumer;
 
 import io.github.applecommander.applesingle.AppleSingle;
+import io.github.applecommander.applesingle.AppleSingleReader;
+import io.github.applecommander.applesingle.Entry;
+import io.github.applecommander.applesingle.EntryType;
 import io.github.applecommander.applesingle.FileDatesInfo;
 import io.github.applecommander.applesingle.ProdosFileInfo;
+import io.github.applecommander.applesingle.Utilities;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
@@ -43,29 +48,22 @@ public class AnalyzeCommand implements Callable<Void> {
 	
 	@Override
 	public Void call() throws IOException {
-		byte[] fileData = stdinFlag ? AppleSingle.toByteArray(System.in) : Files.readAllBytes(path);
+		byte[] fileData = stdinFlag ? Utilities.toByteArray(System.in) : Files.readAllBytes(path);
 		if (verboseFlag) this.verbose = System.out;
 		
-		State state = new State(fileData);
-		match(state, "Magic number", "Not an AppleSingle file - magic number does not match.", 
-				AppleSingle.MAGIC_NUMBER);
-		int version = match(state, "Version", "Only recognize AppleSingle versions 1 and 2.", 
-				AppleSingle.VERSION_NUMBER1, AppleSingle.VERSION_NUMBER2);
-		verbose.printf(" .. Version 0x%08x\n", version);
-		state.read(16, "Filler");
-		int numberOfEntries = state.read(Short.BYTES, "Number of entries").getShort();
-		verbose.printf(" .. Entries = %d\n", numberOfEntries);
-		List<Entry> entries = new ArrayList<>();
-		for (int i = 0; i < numberOfEntries; i++) {
-			ByteBuffer buffer = state.read(12, String.format("Entry #%d", i+1));
-			Entry entry = new Entry(i+1, buffer);
-			entry.print(verbose);
-			entries.add(entry);
-		}
-		entries.sort((a,b) -> Integer.compare(a.offset, b.offset));
-		for (Entry entry : entries) entryReport(state, entry);
+		List<IntRange> used = new ArrayList<>();
+		HexDumper dumper = HexDumper.standard();
+		AppleSingleReader reader = AppleSingleReader.builder()
+				.data(fileData)
+				.readAtReporter((start,len,b,d) -> used.add(IntRange.of(start, start+len)))
+				.readAtReporter((start,len,chunk,desc) -> dumper.dump(start, chunk, desc))
+				.versionReporter(this::reportVersion)
+				.numberOfEntriesReporter(this::reportNumberOfEntries)
+				.entryReporter(this::reportEntry)
+				.build();
+		AppleSingle.asEntries(reader);
 		
-		List<IntRange> ranges = IntRange.normalize(state.used);
+		List<IntRange> ranges = IntRange.normalize(used);
 		if (ranges.size() == 1 && ranges.get(0).getLow() == 0 && ranges.get(0).getHigh() == fileData.length) {
 			verbose.printf("The entirety of the file was used.\n");
 		} else {
@@ -74,99 +72,55 @@ public class AnalyzeCommand implements Callable<Void> {
 		}
 		return null;
 	}
-	
-	public int match(State state, String description, String message, int... expecteds) throws IOException {
-		ByteBuffer buffer = state.read(Integer.BYTES, description);
-		int actual = buffer.getInt();
-		for (int expected : expecteds) {
-			if (actual == expected) return actual;
-		}
-		throw new IOException(String.format("%s  Aborting.", message));
+
+	public void reportVersion(int version) {
+		verbose.printf(" .. %s\n", VERSION_TEXT.getOrDefault(version, "Unrecognized version!"));
 	}
-	
-	public void entryReport(State state, Entry entry) throws IOException {
-		String entryName = AppleSingle.ENTRY_TYPE_NAMES.getOrDefault(entry.entryId, "Unknown");
-		ByteBuffer buffer = state.readAt(entry.offset, entry.length, 
-				String.format("Entry #%d data (%s)", entry.index, entryName));
-		switch (entry.entryId) {
-		case 3:
-		case 4:
-		case 13:
-			displayEntryString(buffer, entryName);
-			break;
-		case 8:
-			displayFileDatesInfo(buffer, entryName);
-			break;
-		case 11:
-			displayProdosFileInfo(buffer, entryName);
-			break;
-		default:
-			verbose.printf(" .. No further details for this entry type (%s).\n", entryName);
-			break;
-		}
+	public void reportNumberOfEntries(int numberOfEntries) {
+		verbose.printf(" .. Number of entries = %d\n", numberOfEntries);
 	}
-	public void displayEntryString(ByteBuffer buffer, String entryName) {
-		StringBuilder sb = new StringBuilder();
-		while (buffer.hasRemaining()) {
-			int ch = Byte.toUnsignedInt(buffer.get()) & 0x7f;
-			sb.append((char)ch);
-		}
-		verbose.printf(" .. %s: '%s'\n", entryName, sb.toString());
+	public void reportEntry(Entry entry) {
+		String entryName = EntryType.findNameOrUnknown(entry);
+		verbose.printf(" .. Entry: entryId=%d (%s), offset=%d, length=%d\n", entry.getEntryId(), 
+				entryName, entry.getOffset(), entry.getLength());
+		REPORTERS.getOrDefault(entry.getEntryId(), this::reportDefaultEntry)
+		         .accept(entry, entryName);
 	}
-	public void displayFileDatesInfo(ByteBuffer buffer, String entryName) {
-		FileDatesInfo info = new FileDatesInfo(buffer.getInt(), buffer.getInt(), buffer.getInt(), buffer.getInt());
+	private void reportDefaultEntry(Entry entry, String entryName) {
+		verbose.printf(" .. No further details for this entry type (%s).\n", entryName);
+	}
+	private void reportStringEntry(Entry entry, String entryName) {
+		verbose.printf(" .. %s: '%s'\n", entryName, Utilities.entryToAsciiString(entry));
+	}
+	private void reportFileDatesInfoEntry(Entry entry, String entryName) {
+		FileDatesInfo info = FileDatesInfo.fromEntry(entry);
 		verbose.printf(" .. %s -\n", entryName);
 		verbose.printf("           Creation: %s\n", info.getCreationInstant().toString());
 		verbose.printf("       Modification: %s\n", info.getModificationInstant().toString());
 		verbose.printf("             Backup: %s\n", info.getBackupInstant().toString());
 		verbose.printf("             Access: %s\n", info.getAccessInstant().toString());
 	}
-	public void displayProdosFileInfo(ByteBuffer buffer, String entryName) {
-		ProdosFileInfo info = new ProdosFileInfo(buffer.getShort(), buffer.getShort(), buffer.getInt());
+	private void reportProdosFileInfoEntry(Entry entry, String entryName) {
+		ProdosFileInfo info = ProdosFileInfo.fromEntry(entry);
 		verbose.printf(" .. %s -\n", entryName);
 		verbose.printf("             Access: %02X\n", info.getAccess());
 		verbose.printf("          File Type: %04X\n", info.getFileType());
 		verbose.printf("          Aux. Type: %04X\n", info.getAuxType());
 	}
 	
-	public static class State {
-		private final byte[] data;
-		private int pos = 0;
-		private List<IntRange> used = new ArrayList<>();
-		private HexDumper dumper = HexDumper.standard();
-		
-		public State(byte[] data) {
-			this.data = data;
+	private static final Map<Integer,String> VERSION_TEXT = new HashMap<Integer,String>() {
+		private static final long serialVersionUID = 7142066556402030814L;
+		{
+			put(AppleSingle.VERSION_NUMBER1, "Version 1");
+			put(AppleSingle.VERSION_NUMBER2, "Version 2");
 		}
-		public ByteBuffer read(int len, String description) throws IOException {
-			return readAt(pos, len, description);
-		}
-		public ByteBuffer readAt(int start, int len, String description) throws IOException {
-			byte[] chunk = new byte[len];
-			System.arraycopy(data, start, chunk, 0, len);
-			ByteBuffer buffer = ByteBuffer.wrap(chunk)
-					.order(ByteOrder.BIG_ENDIAN)
-					.asReadOnlyBuffer();
-			dumper.dump(start, chunk, description);
-			used.add(IntRange.of(start, start+len));
-			pos= start+len;
-			return buffer;
-		}
-	}
-	public static class Entry {
-		private int index;
-		private int entryId;
-		private int offset;
-		private int length;
-		public Entry(int index, ByteBuffer buffer) {
-			this.index = index;
-			this.entryId = buffer.getInt();
-			this.offset = buffer.getInt();
-			this.length = buffer.getInt();
-		}
-		public void print(PrintStream ps) {
-			ps.printf(" .. Entry #%d, entryId=%d (%s), offset=%d, length=%d\n", index, entryId, 
-					AppleSingle.ENTRY_TYPE_NAMES.getOrDefault(entryId, "Unknown"), offset, length);
-		}
+	};
+	private final Map<Integer,BiConsumer<Entry,String>> REPORTERS = new HashMap<Integer,BiConsumer<Entry,String>>();
+	{
+		REPORTERS.put(EntryType.REAL_NAME.entryId, this::reportStringEntry);
+		REPORTERS.put(EntryType.COMMENT.entryId, this::reportStringEntry);
+		REPORTERS.put(EntryType.SHORT_NAME.entryId, this::reportStringEntry);
+		REPORTERS.put(EntryType.FILE_DATES_INFO.entryId, this::reportFileDatesInfoEntry);
+		REPORTERS.put(EntryType.PRODOS_FILE_INFO.entryId, this::reportProdosFileInfoEntry);
 	}
 }

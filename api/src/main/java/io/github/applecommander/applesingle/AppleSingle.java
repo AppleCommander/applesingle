@@ -1,6 +1,5 @@
 package io.github.applecommander.applesingle;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -11,7 +10,9 @@ import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -34,35 +35,16 @@ public class AppleSingle {
 	public static final int MAGIC_NUMBER = 0x0051600;
 	public static final int VERSION_NUMBER1 = 0x00010000;
 	public static final int VERSION_NUMBER2 = 0x00020000;
-	public static final Map<Integer,String> ENTRY_TYPE_NAMES = new HashMap<Integer,String>() {
-		private static final long serialVersionUID = 7142066556402030814L;
-	{
-		put(1, "Data Fork");
-		put(2, "Resource Fork");
-		put(3, "Real Name");
-		put(4, "Comment");
-		put(5, "Icon, B&W");
-		put(6, "Icon, Color");
-		put(7, "File Info");
-		put(8, "File Dates Info");
-		put(9, "Finder Info");
-		put(10, "Macintosh File Info");
-		put(11, "ProDOS File Info");
-		put(12, "MS-DOS File Info");
-		put(13, "Short Name");
-		put(14, "AFP File Info");
-		put(15, "Directory ID");
-	}};
 	
-	private Map<Integer,Consumer<byte[]>> entryConsumers = new HashMap<>();
+	private Map<Integer,Consumer<Entry>> entryConsumers = new HashMap<>();
 	{
-		entryConsumers.put(1, this::setDataFork);
-		entryConsumers.put(2, this::setResourceFork);
-		entryConsumers.put(3, this::setRealName);
-		entryConsumers.put(8, this::setFileDatesInfo);
-		entryConsumers.put(11, this::setProdosFileInfo);
+		entryConsumers.put(1,  entry -> this.dataFork = entry.getData());
+		entryConsumers.put(2,  entry -> this.resourceFork = entry.getData());
+		entryConsumers.put(3,  entry -> this.realName = Utilities.entryToAsciiString(entry));
+		entryConsumers.put(8,  entry -> this.fileDatesInfo = FileDatesInfo.fromEntry(entry));
+		entryConsumers.put(11, entry -> this.prodosFileInfo = ProdosFileInfo.fromEntry(entry));
 	}
-	
+
 	private byte[] dataFork;
 	private byte[] resourceFork;
 	private String realName;
@@ -72,66 +54,13 @@ public class AppleSingle {
 	private AppleSingle() {
 		// Allow Builder construction
 	}
-	private AppleSingle(byte[] data) throws IOException {
-		ByteBuffer buffer = ByteBuffer.wrap(data)
-				.order(ByteOrder.BIG_ENDIAN)
-				.asReadOnlyBuffer();
-		required(buffer, MAGIC_NUMBER, "Not an AppleSingle file - magic number does not match.");
-		required(buffer, VERSION_NUMBER2, "Only AppleSingle version 2 supported.");
-		buffer.position(buffer.position() + 16);	// Skip filler
-		int entries = buffer.getShort();
-		for (int i = 0; i < entries; i++) {
-			int entryId = buffer.getInt();
-			int offset = buffer.getInt();
-			int length = buffer.getInt();
-			buffer.mark();
-			buffer.position(offset);
-			byte[] entryData = new byte[length];
-			buffer.get(entryData);
-			// Defer to the proper set method or crash if we don't support that type of entry
-			Optional.ofNullable(entryConsumers.get(entryId))
-				.orElseThrow(() -> new IOException(String.format("Unsupported entry type of %04X (%s)", entryId, 
-						ENTRY_TYPE_NAMES.getOrDefault(entryId, "Unknown"))))
-				.accept(entryData);
-			buffer.reset();
-		}
-	}
-	private void required(ByteBuffer buffer, int expected, String message) throws IOException {
-		int actual = buffer.getInt();
-		if (actual != expected) {
-			throw new IOException(String.format("%s  Expected 0x%08x but read 0x%08x.", message, expected, actual));
-		}
-	}
-	private void setDataFork(byte[] entryData) {
-		this.dataFork = entryData;
-	}
-	private void setResourceFork(byte[] entryData) {
-		this.resourceFork = entryData;
-	}
-	private void setRealName(byte[] entryData) {
-		for (int i=0; i<entryData.length; i++) {
-			entryData[i] = (byte)(entryData[i] & 0x7f);
-		}
-		this.realName = new String(entryData);
-	}
-	private void setProdosFileInfo(byte[] entryData) {
-		ByteBuffer infoData = ByteBuffer.wrap(entryData)
-				.order(ByteOrder.BIG_ENDIAN)
-				.asReadOnlyBuffer();
-		int access = infoData.getShort();
-		int fileType = infoData.getShort();
-		int auxType = infoData.getInt();
-		this.prodosFileInfo = new ProdosFileInfo(access, fileType, auxType);
-	}
-	private void setFileDatesInfo(byte[] entryData) {
-		ByteBuffer infoData = ByteBuffer.wrap(entryData)
-				.order(ByteOrder.BIG_ENDIAN)
-				.asReadOnlyBuffer();
-		int creation = infoData.getInt();
-		int modification = infoData.getInt();
-		int backup = infoData.getInt();
-		int access = infoData.getInt();
-		this.fileDatesInfo = new FileDatesInfo(creation, modification, backup, access);
+	private AppleSingle(List<Entry> entries) throws IOException {
+		entries.forEach(entry -> {
+			Optional.ofNullable(entry)
+					.map(Entry::getEntryId)
+					.map(entryConsumers::get)
+					.ifPresent(c -> c.accept(entry));
+		});
 	}
 	
 	public byte[] getDataFork() {
@@ -228,7 +157,7 @@ public class AppleSingle {
 
 	public static AppleSingle read(InputStream inputStream) throws IOException {
 		Objects.requireNonNull(inputStream, "Please supply an input stream");
-		return read(AppleSingle.toByteArray(inputStream));
+		return read(Utilities.toByteArray(inputStream));
 	}
 	public static AppleSingle read(File file) throws IOException {
 		Objects.requireNonNull(file, "Please supply a file");
@@ -236,11 +165,54 @@ public class AppleSingle {
 	}
 	public static AppleSingle read(Path path) throws IOException {
 		Objects.requireNonNull(path, "Please supply a file");
-		return new AppleSingle(Files.readAllBytes(path));
+		return read(Files.readAllBytes(path));
 	}
 	public static AppleSingle read(byte[] data) throws IOException {
 		Objects.requireNonNull(data);
-		return new AppleSingle(data);
+		return new AppleSingle(asEntries(data));
+	}
+	
+	public static List<Entry> asEntries(InputStream inputStream) throws IOException {
+		Objects.requireNonNull(inputStream);
+		return asEntries(Utilities.toByteArray(inputStream));
+	}
+	public static List<Entry> asEntries(File file) throws IOException {
+		Objects.requireNonNull(file);
+		return asEntries(file.toPath());
+	}
+	public static List<Entry> asEntries(Path path) throws IOException {
+		Objects.requireNonNull(path);
+		return asEntries(Files.readAllBytes(path));
+	}
+	public static List<Entry> asEntries(byte[] data) throws IOException {
+		Objects.requireNonNull(data);
+		return asEntries(AppleSingleReader.builder().data(data).build());
+	}
+	public static List<Entry> asEntries(AppleSingleReader reader) throws IOException {
+		Objects.requireNonNull(reader);
+		List<Entry> entries = new ArrayList<>();
+		required(reader, "Magic number", "Not an AppleSingle file - magic number does not match.", MAGIC_NUMBER);
+		int version = required(reader, "Version", "Only AppleSingle version 1 and 2 supported.", VERSION_NUMBER1, VERSION_NUMBER2);
+		reader.reportVersion(version);
+		reader.read(16, "Filler");
+		int numberOfEntries = reader.read(Short.BYTES, "Number of entries").getShort();
+		reader.reportNumberOfEntries(numberOfEntries);
+		for (int i = 0; i < numberOfEntries; i++) {
+			Entry entry = Entry.create(reader);
+			entries.add(entry);
+			reader.reportEntry(entry);
+		}
+		return entries;
+	}
+	private static int required(AppleSingleReader reader, String description, String message, int... expecteds) throws IOException {
+		int actual = reader.read(Integer.BYTES, description).getInt();
+		for (int expected : expecteds) {
+			if (actual == expected) return actual;
+		}
+		List<String> versions = new ArrayList<>();
+		for (int expected : expecteds) versions.add(String.format("0x%08x", expected));
+		throw new IOException(String.format("%s  Expected %s but read 0x%08x.", 
+				message, String.join(",", versions), actual));
 	}
 	
 	public static Builder builder() {
@@ -323,18 +295,5 @@ public class AppleSingle {
 		public AppleSingle build() {
 			return as;
 		}
-	}
-
-	/** Utility method to read all bytes from an InputStream. May move if more utility methods appear. */
-	public static byte[] toByteArray(InputStream inputStream) throws IOException {
-		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-		while (true) {
-			byte[] buf = new byte[1024];
-			int len = inputStream.read(buf);
-			if (len == -1) break;
-			outputStream.write(buf, 0, len);
-		}
-		outputStream.flush();
-		return outputStream.toByteArray();
 	}
 }

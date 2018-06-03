@@ -1,5 +1,6 @@
 package io.github.applecommander.applesingle;
 
+import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.util.function.IntSupplier;
 
@@ -17,6 +18,14 @@ public class FileDatesInfo {
 	
 	public static int fromInstant(Instant instant) {
 		return (int)(instant.getEpochSecond() - EPOCH_INSTANT.getEpochSecond());
+	}
+	public static FileDatesInfo fromEntry(Entry entry) {
+		ByteBuffer infoData = entry.getBuffer();
+		int creation = infoData.getInt();
+		int modification = infoData.getInt();
+		int backup = infoData.getInt();
+		int access = infoData.getInt();
+		return new FileDatesInfo(creation, modification, backup, access);
 	}
 	
 	public FileDatesInfo() {
