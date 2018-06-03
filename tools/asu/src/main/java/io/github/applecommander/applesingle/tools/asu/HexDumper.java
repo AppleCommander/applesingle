@@ -48,7 +48,7 @@ public class HexDumper {
 			char ch = ' ';
 			if (i < data.length) {
 				byte b = data[i];
-				ch = (b >= ' ') ? (char)b : '.';
+				ch = (b >= ' ' && Byte.toUnsignedInt(b) != 0xff) ? (char)b : '.';
 			}
 			ps.printf("%c", ch);
 		}
