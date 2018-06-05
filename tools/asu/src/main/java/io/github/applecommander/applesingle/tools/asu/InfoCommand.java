@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 
 import io.github.applecommander.applesingle.AppleSingle;
+import io.github.applecommander.applesingle.FileDatesInfo;
 import io.github.applecommander.applesingle.ProdosFileInfo;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -32,7 +33,9 @@ public class InfoCommand implements Callable<Void> {
 	@Override
 	public Void call() throws IOException {
 		AppleSingle applesingle = stdinFlag ? AppleSingle.read(System.in) : AppleSingle.read(file);
+		
 		System.out.printf("Real Name: %s\n", Optional.ofNullable(applesingle.getRealName()).orElse("-Unknown-"));
+		
 		System.out.printf("ProDOS info:\n");
 		if (applesingle.getProdosFileInfo() == null) {
 			System.out.println("  Not supplied.");
@@ -42,7 +45,20 @@ public class InfoCommand implements Callable<Void> {
 			System.out.printf("  File Type: 0x%02X\n", prodosFileInfo.getFileType());
 			System.out.printf("  Auxtype: 0x%04X\n", prodosFileInfo.getAuxType());
 		}
+		
+		System.out.printf("File dates info:\n");
+		if (applesingle.getFileDatesInfo() == null) {
+			System.out.println("  Not supplied.");
+		} else {
+			FileDatesInfo fileDatesInfo = applesingle.getFileDatesInfo();
+			System.out.printf("  Creation: %s\n", fileDatesInfo.getCreationInstant());
+			System.out.printf("  Modification: %s\n", fileDatesInfo.getModificationInstant());
+			System.out.printf("  Access: %s\n", fileDatesInfo.getAccessInstant());
+			System.out.printf("  Backup: %s\n", fileDatesInfo.getBackupInstant());
+		}
+		
 		System.out.printf("Data Fork: Present, %,d bytes\n", applesingle.getDataFork().length);
+		
 		System.out.printf("Resource Fork: %s\n", 
 				Optional.ofNullable(applesingle.getResourceFork())
 					.map(d -> String.format("Present, %,d bytes", d.length))
