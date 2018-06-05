@@ -61,6 +61,6 @@ public class IntRange {
 	}
 	@Override
 	public String toString() {
-		return String.format("[%d..%d)", low, high);
+		return String.format("%d..%d", low, high-1);
 	}
 }
