@@ -86,7 +86,7 @@ public final class AppleSingleReader {
 
 	/** 
 	 * A reporter for the {@code AppleSingleReader#readAt(int, int, String)} method, 
-	 * heaviliy modeled on the {@code Consumer} interface.
+	 * heavily modeled on the {@code Consumer} interface.
 	 */
 	public interface ReadAtReporter {
 	    /**
