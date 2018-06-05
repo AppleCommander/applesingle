@@ -37,6 +37,11 @@ public class AppleSingle {
 	public static final int VERSION_NUMBER1 = 0x00010000;
 	public static final int VERSION_NUMBER2 = 0x00020000;
 	
+	public static final String VERSION;
+	static {
+		VERSION = AppleSingle.class.getPackage().getImplementationVersion();
+	}	
+	
 	private Map<Integer,Consumer<Entry>> entryConsumers = new HashMap<>();
 	{
 		entryConsumers.put(1,  entry -> this.dataFork = entry.getData());
