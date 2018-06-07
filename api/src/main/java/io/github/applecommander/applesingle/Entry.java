@@ -15,7 +15,8 @@ public class Entry {
 	private int offset;
 	private int length;
 	private byte[] data;
-	
+
+	/** Create an Entry and read it's data from the reader. */
 	public static Entry create(AppleSingleReader reader) {
 		Objects.requireNonNull(reader);
 		
@@ -28,6 +29,7 @@ public class Entry {
 		entry.data = reader.readAt(entry.offset, entry.length, EntryType.findNameOrUnknown(entry)).array();
 		return entry;
 	}
+	/** Create an Entry. */
 	public static Entry create(EntryType type, byte[] data) {
 		Objects.requireNonNull(type);
 		Objects.requireNonNull(data);
@@ -37,6 +39,18 @@ public class Entry {
 		entry.length = data.length;
 		entry.data = data;
 		return entry;
+	}
+	/** Create a REAL_NAME entry.  Primarily used for Java 8 streams. */
+	public static Entry realName(byte[] data) {
+		return create(EntryType.REAL_NAME, data);
+	}
+	/** Create a DATA_FORK entry.  Primarily used for Java 8 streams. */
+	public static Entry dataFork(byte[] data) {
+		return create(EntryType.DATA_FORK, data);
+	}
+	/** Create a RESOURCE_FORK entry.  Primarily used for Java 8 streams. */
+	public static Entry resourceFork(byte[] data) {
+		return create(EntryType.RESOURCE_FORK, data);
 	}
 	
 	public int getEntryId() {

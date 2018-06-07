@@ -1,6 +1,6 @@
 package io.github.applecommander.applesingle;
 
-import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -80,6 +80,17 @@ public class AppleSingleTest {
 	
 	@Test(expected = IllegalArgumentException.class)
 	public void testProdosFileNameFirstCharacter() {
+		// Fails due to the first character being a digit.
 		AppleSingle.builder().realName("1st-file").build();
+	}
+	
+	@Test
+	public void testTest() throws IOException {
+		// Known valid
+		assertTrue(AppleSingle.test(getClass().getResourceAsStream(AS_HELLO_BIN)));
+		// Known invalid
+		assertFalse(AppleSingle.test(new byte[200]));
+		// Could/should generate error due to truncated data, but this method should just give us a false.
+		assertFalse(AppleSingle.test(new byte[3]));
 	}
 }

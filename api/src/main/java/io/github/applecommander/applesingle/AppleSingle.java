@@ -20,7 +20,7 @@ import java.util.function.Consumer;
 
 /**
  * Support reading of data from and AppleSingle source.
- * Does not implement all components at this time, extend as required.
+ * Does not implement all components at this time, extend as required and/or understood.
  * All construction has been deferred to the <code>read(...)</code> or {@link #builder()} methods.
  * <p>
  * Currently supports entries:<br/>
@@ -85,11 +85,12 @@ public class AppleSingle {
 		return fileDatesInfo;
 	}
 	
+	/** Write this AppleSingle to the given output stream. Note that it only supports the "understood" components. */
 	public void save(OutputStream outputStream) throws IOException {
 		List<Entry> entries = new ArrayList<>();
 		Optional.ofNullable(this.realName)
 				.map(String::getBytes)
-				.map(b -> Entry.create(EntryType.REAL_NAME, b))
+				.map(Entry::realName)
 				.ifPresent(entries::add);
 		Optional.ofNullable(this.prodosFileInfo)
 				.map(ProdosFileInfo::toEntry)
@@ -98,18 +99,20 @@ public class AppleSingle {
 				.map(FileDatesInfo::toEntry)
 				.ifPresent(entries::add);
 		Optional.ofNullable(this.resourceFork)
-				.map(b -> Entry.create(EntryType.RESOURCE_FORK, b))
+				.map(Entry::resourceFork)
 				.ifPresent(entries::add);
 		Optional.ofNullable(this.dataFork)
-				.map(b -> Entry.create(EntryType.DATA_FORK, b))
+				.map(Entry::dataFork)
 				.ifPresent(entries::add);
 		write(outputStream, entries);
 	}
+	/** Save this AppleSingle to a File. */
 	public void save(File file) throws IOException {
 		try (FileOutputStream outputStream = new FileOutputStream(file)) {
 			save(outputStream);
 		}
 	}
+	/** Save this AppleSingle to a Path. */
 	public void save(Path path) throws IOException {
 		try (OutputStream outputStream = Files.newOutputStream(path)) {
 			save(outputStream);
@@ -117,8 +120,8 @@ public class AppleSingle {
 	}
 	
 	/** 
-	 * Common write capability for an AppleSingle.  Also can be used by external entities to 
-	 * write a properly formatted AppleSingle file without the ProDOS assumptions of AppleSingle. 
+	 * Common write capability for an AppleSingle based on entries.  Also can be used by external 
+	 * entities to write a properly formatted AppleSingle file without the ProDOS assumptions of AppleSingle. 
 	 */
 	public static void write(OutputStream outputStream, List<Entry> entries) throws IOException {
 		final byte[] filler = new byte[16];
@@ -197,6 +200,44 @@ public class AppleSingle {
 		for (int expected : expecteds) versions.add(String.format("0x%08x", expected));
 		throw new IOException(String.format("%s  Expected %s but read 0x%08x.", 
 				message, String.join(",", versions), actual));
+	}
+	
+	/** Perform a quick test against a File to see if it is an AppleSingle file. */
+	public static boolean test(File file) throws IOException {
+		Objects.requireNonNull(file);
+		return test(file.toPath());
+	}
+	/** Perform a quick test against a Path to see if it is an AppleSingle file. */
+	public static boolean test(Path path) throws IOException {
+		Objects.requireNonNull(path);
+		return test(Files.readAllBytes(path));
+	}
+	/** Perform a quick test against an InputStream to see if it is an AppleSingle file. */
+	public static boolean test(InputStream inputStream) throws IOException {
+		Objects.requireNonNull(inputStream);
+		return test(Utilities.toByteArray(inputStream));
+	}
+	/** Perform a quick test against a byte array to see if it is an AppleSingle file. */
+	public static boolean test(byte[] data) {
+		Objects.requireNonNull(data);
+		return test(AppleSingleReader.builder(data).build());
+	}
+	/** Perform a quick test against a reader to see if it is an AppleSingle file. */
+	public static boolean test(AppleSingleReader reader) {
+		Objects.requireNonNull(reader);
+		return check(reader, MAGIC_NUMBER) && check(reader, VERSION_NUMBER1, VERSION_NUMBER2);
+	}
+	private static boolean check(AppleSingleReader reader, int... expecteds) {
+		try {
+			final String message = "";	// Just needed for read.
+			int actual = reader.read(Integer.BYTES, message).getInt();
+			for (int expected : expecteds) {
+				if (actual == expected) return true;
+			}
+		} catch (ArrayIndexOutOfBoundsException ignored) {
+			// Bad file!  Fall through.
+		}
+		return false;
 	}
 	
 	public static Builder builder() {
