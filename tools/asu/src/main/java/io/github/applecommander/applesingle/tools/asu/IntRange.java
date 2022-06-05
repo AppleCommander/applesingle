@@ -17,7 +17,7 @@ public class IntRange {
 
 	/** Create an integer range. */
 	public static IntRange of(int low, int high) {
-		if (low == high) throw new UnsupportedOperationException("low and high cannot be the same");
+		if (low > high) throw new UnsupportedOperationException("low cannot be greater than high");
 		return new IntRange(Math.min(low,high), Math.max(low,high));
 	}
 	/** Normalize a list by combining all integer ranges that match. */
