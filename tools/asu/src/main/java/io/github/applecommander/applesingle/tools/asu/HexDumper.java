@@ -32,6 +32,9 @@ public class HexDumper {
 			description = "";	// Only on first line!
 			offset += line.length;
 		}
+		if (data.length == 0) {
+		    printLine.print(address+offset, data, String.format("%s (empty)", description));
+		}
 	}
 	
 	public void standardLine(int address, byte[] data, String description) {
@@ -48,7 +51,8 @@ public class HexDumper {
 			char ch = ' ';
 			if (i < data.length) {
 				byte b = data[i];
-				ch = (b >= ' ' && Byte.toUnsignedInt(b) != 0xff) ? (char)b : '.';
+				//ch = (Character.isISOControl(Byte.toUnsignedInt(b))) ? '.' : (char)b; 
+				ch = (b >= ' ' && Byte.toUnsignedInt(b) < 0x7f) ? (char)b : '.';
 			}
 			ps.printf("%c", ch);
 		}
