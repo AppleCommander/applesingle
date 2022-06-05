@@ -9,6 +9,9 @@ repositories {
 
 apply plugin: 'application'
 
+sourceCompatibility = '11'
+targetCompatibility = '11'
+
 mainClassName = "io.github.applecommander.applesingle.tools.asu.Main"
 
 bootJar {

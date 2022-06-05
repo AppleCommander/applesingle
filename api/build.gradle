@@ -6,6 +6,9 @@ apply plugin: 'java-library'
 apply plugin: 'maven'
 apply plugin: 'signing'
 
+sourceCompatibility = '11'
+targetCompatibility = '11'
+
 dependencies {
     testImplementation 'junit:junit:4.12'
 }
