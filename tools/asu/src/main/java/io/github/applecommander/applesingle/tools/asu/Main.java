@@ -29,7 +29,7 @@ public class Main implements Runnable {
 	
 	public static void main(String[] args) {
 		try {
-			CommandLine.run(new Main(), args);
+			new CommandLine(new Main()).execute(args);
 		} catch (Throwable t) {
 			if (Main.debugFlag) {
 				t.printStackTrace(System.err);
