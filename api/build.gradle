@@ -1,34 +1,43 @@
-repositories {
-    jcenter()
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'signing'
 }
 
-apply plugin: 'java-library'
-apply plugin: 'maven'
-apply plugin: 'signing'
+ext.isSnapshotVersion = version.endsWith("SNAPSHOT")
+ext.isReleaseVersion = !ext.isSnapshotVersion
 
 sourceCompatibility = '11'
 targetCompatibility = '11'
 
-dependencies {
-    testImplementation 'junit:junit:4.12'
+repositories {
+    mavenCentral()
 }
 
-jar {
-  manifest {
-    attributes(
-      'Implementation-Title': 'AppleSingle',
-      'Implementation-Version': "${project.version} (${new Date().format('yyyy-MM-dd HH:mm')})"
-    )
-  }
+dependencies {
+    testImplementation 'junit:junit:4.13.1'
+}
+
+tasks.withType(Jar) {
+    manifest {
+        attributes 'Implementation-Title': 'AppleSingle',
+                   'Implementation-Version': "${project.version} (${new Date().format('yyyy-MM-dd HH:mm')})"
+    }
+}
+
+javadoc {
+    title = "applesingle-api ${project.version}"
+    source = sourceSets.main.allJava
+    options.addStringOption('Xdoclint:none', '-quiet')
 }
 
 task javadocJar(type: Jar) {
-    classifier = 'javadoc'
+    archiveClassifier = 'javadoc'
     from javadoc
 }
 
 task sourcesJar(type: Jar) {
-    classifier = 'sources'
+    archiveClassifier = 'sources'
     from sourceSets.main.allSource
 }
 
@@ -36,49 +45,52 @@ artifacts {
     archives javadocJar, sourcesJar
 }
 
-signing {
-    // Only sign if we're uploading...
-    required { gradle.taskGraph.hasTask("uploadArchives") }
-    sign configurations.archives
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            artifact sourcesJar
+            artifact javadocJar
+            pom {
+                groupId = "net.sf.applecommander"
+                artifactId = "applesingle-api"
+                name = 'applesingle-api'
+                description = 'A Java library for managing AppleSingle files.'
+                url = 'https://applecommander.github.io/'
+                licenses {
+                    license {
+                        name = 'The GNU General Public License (GPL) Version 2, June 1991'
+                        url = 'https://www.gnu.org/licenses/gpl-2.0.html'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'robgreene'
+                        name = 'Rob Greene'
+                        email = 'robgreene@gmail.com'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:https://github.com/AppleCommander/applesingle.git'
+                    developerConnection = 'scm:git:git@github.com:AppleCommander/applesingle.git'
+                    url = 'https://github.com/AppleCommander/applesingle'
+                }
+            }
+            repositories {
+                maven {
+                    def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+                    def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
+                    url = isSnapshotVersion ? snapshotsRepoUrl : releasesRepoUrl
+                    credentials {
+                        username = findProperty('ossrhUsername')
+                        password = findProperty('ossrhPassword')
+                    }
+                }
+            }
+        }
+    }
 }
 
-uploadArchives {
-  repositories {
-    mavenDeployer {
-      beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
-
-      repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-        authentication(userName: findProperty('ossrhUsername'), password: findProperty('ossrhPassword'))
-      }
-
-      snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-        authentication(userName: findProperty('ossrhUsername'), password: findProperty('ossrhPassword'))
-      }
-
-      pom.project {
-        name archivesBaseName
-        packaging 'jar'
-        description 'A Java library for managing AppleSingle files.'
-        url 'https://applecommander.github.io/'
-
-        scm {
-          url 'https://github.com/AppleCommander/applesingle'
-        }
-
-        licenses {
-          license {
-            name 'The GNU General Public License (GPL) Version 3, 29 June 2007'
-            url 'https://www.gnu.org/licenses/gpl-3.0.html'
-          }
-        }
-
-        developers {
-          developer {
-            id 'robgreene'
-            email 'robgreene@gmail.com'
-          }
-        }
-      }
-    }
-  }
+signing {
+    sign publishing.publications.mavenJava
 }
