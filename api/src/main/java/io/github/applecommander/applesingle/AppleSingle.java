@@ -243,8 +243,17 @@ public class AppleSingle {
 	public static Builder builder() {
 		return new Builder();
 	}
+	public static Builder builder(AppleSingle original) {
+		return new Builder(original);
+	}
 	public static class Builder {
-		private AppleSingle as = new AppleSingle();
+		final private AppleSingle as;
+		private Builder() {
+			this.as = new AppleSingle();
+		}
+		private Builder(AppleSingle original) {
+			this.as = original;
+		}
 		public Builder realName(String realName) {
 			if (!Character.isAlphabetic(realName.charAt(0))) {
 				throw new IllegalArgumentException("ProDOS file names must begin with a letter");

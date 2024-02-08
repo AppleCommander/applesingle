@@ -17,7 +17,8 @@ import picocli.CommandLine.Option;
 	description = "AppleSingle utility", 
 	subcommands = { 
 			AnalyzeCommand.class, 
-			CreateCommand.class, 
+			CreateCommand.class,
+			EditCommand.class,
 			ExtractCommand.class,
 			FilterCommand.class,
 			HelpCommand.class, 
