@@ -12,7 +12,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'info.picocli:picocli:4.7.5'
+    implementation 'info.picocli:picocli:4.7.6'
     implementation project(':applesingle-api')
 }
 
