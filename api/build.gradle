@@ -7,8 +7,10 @@ plugins {
 ext.isSnapshotVersion = version.endsWith("SNAPSHOT")
 ext.isReleaseVersion = !ext.isSnapshotVersion
 
-sourceCompatibility = '11'
-targetCompatibility = '11'
+java {
+    sourceCompatibility = '11'
+    targetCompatibility = '11'
+}
 
 repositories {
     mavenCentral()
@@ -18,7 +20,7 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
 }
 
-tasks.withType(Jar) {
+jar {
     manifest {
         attributes 'Implementation-Title': 'AppleSingle',
                    'Implementation-Version': "${project.version} (${new Date().format('yyyy-MM-dd HH:mm')})"
@@ -31,12 +33,12 @@ javadoc {
     options.addStringOption('Xdoclint:none', '-quiet')
 }
 
-task javadocJar(type: Jar) {
+tasks.register('javadocJar', Jar) {
     archiveClassifier = 'javadoc'
     from javadoc
 }
 
-task sourcesJar(type: Jar) {
+tasks.register('sourcesJar', Jar) {
     archiveClassifier = 'sources'
     from sourceSets.main.allSource
 }
