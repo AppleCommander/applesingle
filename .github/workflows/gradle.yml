@@ -36,5 +36,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: build-artifacts
-        pattern: tools/asu/build/libs/applesingle-tools-asu-*.jar
+        path: tools/asu/build/libs/applesingle-tools-asu-*.jar
         if-no-files-found: error
