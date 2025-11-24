@@ -1,5 +1,14 @@
 name: GraalVM Native Image builds
-on: [push, pull_request]
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
 jobs:
   build:
     name: asu on ${{ matrix.os }}-${{ matrix.arch }}
