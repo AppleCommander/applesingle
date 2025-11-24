@@ -38,7 +38,10 @@ jobs:
       # Therefore, we try to find runners that fit our targets (see above).
       - name: Build 'asu'
         run: ./gradlew nativeCompile
-      
+        env:
+          # Needed for Windows; not an issue for other OSes
+          GRADLE_OPTS: -Djava.io.tmpdir=${{ runner.temp }}
+
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
