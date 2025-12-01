@@ -1,5 +1,5 @@
 plugins {
-    id 'org.springframework.boot' version "2.7.18"
+    id 'org.springframework.boot' version "4.0.0"
     id 'java'
     id 'application'
     id 'org.graalvm.buildtools.native' version '0.11.3'
@@ -25,6 +25,14 @@ jar {
 
 application {
     mainClass = "io.github.applecommander.applesingle.tools.asu.Main"
+}
+
+// Disable all Spring AOT processing
+processAot.configure {
+    enabled = false;
+}
+processTestAot.configure {
+    enabled = false;
 }
 
 bootJar {
