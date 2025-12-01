@@ -27,6 +27,14 @@ application {
     mainClass = "io.github.applecommander.applesingle.tools.asu.Main"
 }
 
+// Disable all Spring AOT processing
+processAot.configure {
+    enabled = false;
+}
+processTestAot.configure {
+    enabled = false;
+}
+
 bootJar {
     manifest {
         attributes(
