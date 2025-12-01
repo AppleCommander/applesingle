@@ -1,0 +1,23 @@
+plugins {
+    id 'java'
+}
+
+ext {
+    // Dependency versions
+    // ???
+}
+
+subprojects {
+    sourceCompatibility = '21'
+    targetCompatibility = '21'
+}
+
+if (JavaVersion.current().isJava8Compatible()) {
+    allprojects {
+        tasks.withType(Javadoc).tap {
+            configureEach {
+                options.addStringOption('Xdoclint:none', '-quiet')
+            }
+        }
+    }
+}

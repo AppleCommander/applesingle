@@ -7,11 +7,6 @@ plugins {
 ext.isSnapshotVersion = version.endsWith("SNAPSHOT")
 ext.isReleaseVersion = !ext.isSnapshotVersion
 
-java {
-    sourceCompatibility = '11'
-    targetCompatibility = '11'
-}
-
 repositories {
     mavenCentral()
 }
@@ -30,7 +25,6 @@ jar {
 javadoc {
     title = "applesingle-api ${project.version}"
     source = sourceSets.main.allJava
-    options.addStringOption('Xdoclint:none', '-quiet')
 }
 
 tasks.register('javadocJar', Jar) {
