@@ -2,14 +2,11 @@ plugins {
     id 'java'
 }
 
-ext {
-    // Dependency versions
-    // ???
-}
-
 subprojects {
-    sourceCompatibility = '21'
-    targetCompatibility = '21'
+    java {
+        sourceCompatibility = 25
+        targetCompatibility = 25
+    }
 }
 
 if (JavaVersion.current().isJava8Compatible()) {
