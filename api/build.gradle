@@ -44,19 +44,21 @@ artifacts {
 publishing {
     publications {
         mavenJava(MavenPublication) {
+            groupId = "org.applecommander"
+            artifactId = "applesingle-api"
+
             from components.java
+
             artifact sourcesJar
             artifact javadocJar
             pom {
-                groupId = "net.sf.applecommander"
-                artifactId = "applesingle-api"
                 name = 'applesingle-api'
                 description = 'A Java library for managing AppleSingle files.'
                 url = 'https://applecommander.github.io/'
                 licenses {
                     license {
-                        name = 'The GNU General Public License (GPL) Version 2, June 1991'
-                        url = 'https://www.gnu.org/licenses/gpl-2.0.html'
+                        name = 'The GNU General Public License (GPL) Version 3, June 2007'
+                        url = 'https://www.gnu.org/licenses/gpl-3.0.html'
                     }
                 }
                 developers {
@@ -74,8 +76,8 @@ publishing {
             }
             repositories {
                 maven {
-                    def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-                    def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
+                    def releasesRepoUrl = "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2"
+                    def snapshotsRepoUrl = "https://ossrh-staging-api.central.sonatype.com/content/repositories/snapshots/"
                     url = isSnapshotVersion ? snapshotsRepoUrl : releasesRepoUrl
                     credentials {
                         username = findProperty('ossrhUsername')
@@ -88,5 +90,9 @@ publishing {
 }
 
 signing {
+    def signingKey = findProperty("signingKey")
+    def signingPassword = findProperty("signingPassword")
+    def signingKeyId = findProperty("signingKeyId")
+    useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
     sign publishing.publications.mavenJava
 }
