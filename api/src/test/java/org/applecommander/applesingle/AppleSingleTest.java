@@ -1,0 +1,115 @@
+/*
+ * AppleSingle - A Java library and command-line tool for AppleSingle support.
+ * Copyright (C) 2026  Robert Greene
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+package org.applecommander.applesingle;
+
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+
+import org.junit.Test;
+
+public class AppleSingleTest {
+	private static final String AS_HELLO_BIN = "/hello.applesingle.bin";
+	
+	@Test
+	public void testSampleFromCc65() throws IOException {
+		AppleSingle as = AppleSingle.read(getClass().getResourceAsStream(AS_HELLO_BIN)); 
+		
+		assertNull(as.getRealName());
+		assertNull(as.getResourceFork());
+		assertNotNull(as.getDataFork());
+		assertNotNull(as.getProdosFileInfo());
+		
+		ProdosFileInfo info = as.getProdosFileInfo();
+		assertEquals(0xc3, info.getAccess());
+		assertEquals(0x06, info.getFileType());
+		assertEquals(0x0803, info.getAuxType());
+	}
+
+	@Test
+	public void testCreateAndReadAppleSingle() throws IOException {
+		final byte[] dataFork = "testing testing 1-2-3".getBytes();
+		final String realName = "test.as";
+		// Need to truncate to seconds as the AppleSingle format is only good to seconds!
+		final Instant instant = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+		
+		// Using default ProDOS info and skipping resource fork
+		AppleSingle createdAS = AppleSingle.builder()
+				.dataFork(dataFork)
+				.realName(realName)
+				.allDates(instant)
+				.build();
+		assertNotNull(createdAS);
+		assertEquals(realName.toUpperCase(), createdAS.getRealName());
+		assertArrayEquals(dataFork, createdAS.getDataFork());
+		assertNull(createdAS.getResourceFork());
+		assertNotNull(createdAS.getProdosFileInfo());
+		
+		ByteArrayOutputStream actualBytes = new ByteArrayOutputStream();
+		createdAS.save(actualBytes);
+		assertNotNull(actualBytes);
+		
+		AppleSingle readAS = AppleSingle.read(actualBytes.toByteArray());
+		assertNotNull(readAS);
+		assertEquals(realName.toUpperCase(), readAS.getRealName());
+		assertArrayEquals(dataFork, readAS.getDataFork());
+		assertNull(readAS.getResourceFork());
+		assertNotNull(readAS.getProdosFileInfo());
+		assertNotNull(readAS.getFileDatesInfo());
+		assertEquals(instant, readAS.getFileDatesInfo().getCreationInstant());
+		assertEquals(instant, readAS.getFileDatesInfo().getModificationInstant());
+		assertEquals(instant, readAS.getFileDatesInfo().getAccessInstant());
+		assertEquals(instant, readAS.getFileDatesInfo().getBackupInstant());
+	}
+	
+	@Test
+	public void testProdosFileNameLengthRequirements() {
+		AppleSingle as = AppleSingle.builder().realName("superlongnamethatneedstobetruncated").build();
+		assertEquals(15, as.getRealName().length());
+	}
+	
+	@Test
+	public void testProdosFileNameCharacterRequirements() {
+		AppleSingle as = AppleSingle.builder().realName("bad-~@").build();
+		assertEquals("BAD...", as.getRealName());
+	}
+	
+	@Test(expected = IllegalArgumentException.class)
+	public void testProdosFileNameFirstCharacter() {
+		// Fails due to the first character being a digit.
+		AppleSingle.builder().realName("1st-file").build();
+	}
+	
+	@Test
+	public void testTest() throws IOException {
+		// Known valid
+		assertTrue(AppleSingle.test(getClass().getResourceAsStream(AS_HELLO_BIN)));
+		// Known invalid
+		assertFalse(AppleSingle.test(new byte[200]));
+		// Could/should generate error due to truncated data, but this method should just give us a false.
+		assertFalse(AppleSingle.test(new byte[3]));
+	}
+}

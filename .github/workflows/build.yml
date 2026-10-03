@@ -1,0 +1,160 @@
+name: Build AppleSingle 'asu' CLI and API
+
+on:
+  push:
+    branches: [ "main" ]
+    tags:
+      - '*'
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-java:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+    - name: Set up JDK 25
+      uses: actions/setup-java@v6.0.1
+      with:
+        java-version: '25'
+        distribution: 'temurin'
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v6
+    - name: Build with Gradle
+      run: ./gradlew build
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v7
+      with:
+        name: build-artifacts
+        path: | 
+          tools/asu/build/libs/applesingle-tools-asu-*.jar
+          !tools/asu/build/libs/applesingle-tools-asu-*-plain.jar
+        archive: false
+        if-no-files-found: error
+
+  # This is a crude license header check. The ones I tested were susceptible to whitespace differences
+  # and I never got them to work. My primary goal is to ensure the headers exist, so this suffices.
+  license-check:
+    name: License check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Look for license phrase
+        run: |
+          outfile=$(mktemp)
+          find . -name "*.java" -not -name module-info.java | xargs grep -L "GNU General Public License" > ${outfile}
+          if [ -s "${outfile}" ]
+          then
+            echo "License headers missing on the following files:"
+            cat ${outfile}
+            exit 1
+          else
+            echo "License headers appear to be valid!"
+          fi
+
+  build-native:
+    name: asu on ${{ matrix.os }}-${{ matrix.arch }}
+    needs: [build-java, license-check]
+    runs-on: ${{ matrix.label  }}
+    strategy:
+      matrix:
+        # See: https://docs.github.com/en/actions/concepts/runners/about-github-hosted-runners#overview-of-github-hosted-runners
+        # ... and follow the links to the related Github repositories
+        include:
+          - label: ubuntu-latest
+            os: linux
+            arch: x86_64
+          - label: ubuntu-24.04-arm
+            os: linux
+            arch: aarch64
+          - label: windows-latest
+            os: windows
+            arch: x86_64
+          - label: macos-15-intel
+            os: darwin
+            arch: x86_64
+          - label: macos-15
+            os: darwin
+            arch: arm64
+    steps:
+      - uses: actions/checkout@v7
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '25'
+          distribution: 'graalvm-community'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          native-image-job-reports: 'true'
+      - name: Build 'asu'
+        run: ./gradlew nativeCompile
+        env:
+          # Needed for Windows; not an issue for other OSes
+          GRADLE_OPTS: -Djava.io.tmpdir=${{ runner.temp }}
+      - name: Run UPX
+        uses: crazy-max/ghaction-upx@v4
+        if: runner.os == 'Linux'
+        with:
+          files: |
+            tools/asu/build/native/nativeCompile/asu*
+      - name: Upload binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: asu-${{ matrix.os }}-${{ matrix.arch }}
+          path: tools/asu/build/native/nativeCompile/asu*
+
+  release:
+    name: Create draft release
+    if: github.ref_type == 'tag'
+    needs: [build-java, build-native]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v3
+        with:
+          draft: true
+          generate_release_notes: true
+          files: |
+            asu-*
+            applesingle-tools-asu-*.jar
+
+  publish:
+    name: Publish to Maven Central
+    if: github.ref_type == 'tag'
+    needs: [build-java, build-native]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Set up JDK 25
+        uses: actions/setup-java@v6.0.1
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+      - name: Publish with Gradle
+        run: |
+          export ORG_GRADLE_PROJECT_signingKey=$(echo "$GPG_SIGNING_KEY_BASE64" | base64 -d)
+          ./gradlew build publish -x test
+        env:
+          ORG_GRADLE_PROJECT_ossrhUsername: ${{ secrets.OSSRH_USERNAME }}
+          ORG_GRADLE_PROJECT_ossrhPassword: ${{ secrets.OSSRH_TOKEN }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_SIGNING_PASSPHRASE }}
+          GPG_SIGNING_KEY_BASE64: ${{ secrets.GPG_SIGNING_KEY_BASE64 }}
+          ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.GPG_SIGNING_KEY_ID }}
+      - name: Setup .netrc file
+        uses: extractions/netrc@v3
+        with:
+          machine: ossrh-staging-api.central.sonatype.com
+          username: ${{ secrets.OSSRH_USERNAME }}
+          password: ${{ secrets.OSSRH_TOKEN }}
+      - name: Finish publishing
+        run: ./scripts/finish-publishing.sh

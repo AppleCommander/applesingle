@@ -24,7 +24,7 @@ jar {
 }
 
 application {
-    mainClass = "io.github.applecommander.applesingle.tools.asu.Main"
+    mainClass = "org.applecommander.applesingle.tools.asu.Main"
 }
 
 // Disable all Spring AOT processing

@@ -6,7 +6,7 @@
     "name": "groovy.lang.Closure"
   },
   {
-    "name": "io.github.applecommander.applesingle.tools.asu.AnalyzeCommand",
+    "name": "org.applecommander.applesingle.tools.asu.AnalyzeCommand",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "methods": [
@@ -17,7 +17,7 @@
     ]
   },
   {
-    "name": "io.github.applecommander.applesingle.tools.asu.CreateCommand",
+    "name": "org.applecommander.applesingle.tools.asu.CreateCommand",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "methods": [
@@ -28,7 +28,7 @@
     ]
   },
   {
-    "name": "io.github.applecommander.applesingle.tools.asu.EditCommand",
+    "name": "org.applecommander.applesingle.tools.asu.EditCommand",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "methods": [
@@ -39,7 +39,7 @@
     ]
   },
   {
-    "name": "io.github.applecommander.applesingle.tools.asu.ExtractCommand",
+    "name": "org.applecommander.applesingle.tools.asu.ExtractCommand",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "methods": [
@@ -50,7 +50,7 @@
     ]
   },
   {
-    "name": "io.github.applecommander.applesingle.tools.asu.FilterCommand",
+    "name": "org.applecommander.applesingle.tools.asu.FilterCommand",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "methods": [
@@ -61,7 +61,7 @@
     ]
   },
   {
-    "name": "io.github.applecommander.applesingle.tools.asu.InfoCommand",
+    "name": "org.applecommander.applesingle.tools.asu.InfoCommand",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "methods": [
@@ -72,7 +72,7 @@
     ]
   },
   {
-    "name": "io.github.applecommander.applesingle.tools.asu.IntegerTypeConverter",
+    "name": "org.applecommander.applesingle.tools.asu.IntegerTypeConverter",
     "methods": [
       {
         "name": "<init>",
@@ -81,7 +81,7 @@
     ]
   },
   {
-    "name": "io.github.applecommander.applesingle.tools.asu.Main",
+    "name": "org.applecommander.applesingle.tools.asu.Main",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "methods": [
@@ -94,7 +94,7 @@
     ]
   },
   {
-    "name": "io.github.applecommander.applesingle.tools.asu.ProdosFileTypeConverter",
+    "name": "org.applecommander.applesingle.tools.asu.ProdosFileTypeConverter",
     "methods": [
       {
         "name": "<init>",
@@ -103,7 +103,7 @@
     ]
   },
   {
-    "name": "io.github.applecommander.applesingle.tools.asu.VersionProvider",
+    "name": "org.applecommander.applesingle.tools.asu.VersionProvider",
     "allDeclaredFields": true,
     "queryAllDeclaredMethods": true,
     "methods": [
