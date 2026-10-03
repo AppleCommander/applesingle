@@ -30,7 +30,10 @@ jobs:
       uses: actions/upload-artifact@v7
       with:
         name: build-artifacts
-        path: tools/asu/build/libs/applesingle-tools-asu-*.jar
+        path: | 
+          tools/asu/build/libs/applesingle-tools-asu-*.jar
+          !tools/asu/build/libs/applesingle-tools-asu-*-javadoc.jar
+          !tools/asu/build/libs/applesingle-tools-asu-*-sources.jar
         archive: false
         if-no-files-found: error
 
