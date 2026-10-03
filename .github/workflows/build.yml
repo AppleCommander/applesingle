@@ -57,7 +57,7 @@ jobs:
 
   build-native:
     name: asu on ${{ matrix.os }}-${{ matrix.arch }}
-    needs: [build-swt-jpackage, build-javafx-jpackage]
+    needs: [build-java, license-check]
     runs-on: ${{ matrix.label  }}
     strategy:
       matrix:
