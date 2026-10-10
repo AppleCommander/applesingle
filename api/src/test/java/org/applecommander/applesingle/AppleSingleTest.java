@@ -17,14 +17,14 @@
  */
 package org.applecommander.applesingle;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class AppleSingleTest {
 	private static final String AS_HELLO_BIN = "/hello.applesingle.bin";

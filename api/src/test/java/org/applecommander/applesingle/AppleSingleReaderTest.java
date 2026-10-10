@@ -17,15 +17,19 @@
  */
 package org.applecommander.applesingle;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 public class AppleSingleReaderTest {
-	@Test(expected = NullPointerException.class)
+	@Test
 	public void testDoesNotAcceptNull() {
-		AppleSingleReader.builder(null);
+		assertThrows(NullPointerException.class, () -> {
+			AppleSingleReader.builder(null);
+		});
+
 	}
 	
 	@Test
