@@ -47,7 +47,20 @@ public class AppleSingle {
 	
 	public static final String VERSION;
 	static {
-		VERSION = AppleSingle.class.getPackage().getImplementationVersion();
+		String version = AppleSingle.class.getPackage().getImplementationVersion();
+		if (version == null && AppleSingle.class.getModule().getDescriptor() != null) {
+			// When run under the Java Module system (JPMS) we need to get it a different way.
+			version = AppleSingle.class.getModule()
+					.getDescriptor()
+					.version()
+					.map(Object::toString)
+					.orElse("Development Build");
+		}
+		// For unit tests, the descriptor (apparently) doesn't exist, so we skip it.
+		if (version == null) {
+			version = "Unit Testing";
+		}
+		VERSION = version;
 	}	
 	
 	private Map<Integer,Consumer<Entry>> entryConsumers = new HashMap<>();
