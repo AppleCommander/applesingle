@@ -17,22 +17,13 @@
  */
 package org.applecommander.applesingle;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Consumer;
 
 /**
@@ -269,30 +260,21 @@ public class AppleSingle {
 			this.as = new AppleSingle();
 		}
 		private Builder(AppleSingle original) {
+			Objects.requireNonNull(original);
 			this.as = original;
 		}
 		public Builder realName(String realName) {
-			if (!Character.isAlphabetic(realName.charAt(0))) {
-				throw new IllegalArgumentException("ProDOS file names must begin with a letter");
-			}
-			as.realName = realName.chars()
-					.map(this::sanitize)
-					.limit(15)
-					.collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
-					.toString();
+			Objects.requireNonNull(realName);
+			as.realName = realName;
 			return this;
 		}
-		private int sanitize(int ch) {
-			if (Character.isAlphabetic(ch) || Character.isDigit(ch)) {
-				return Character.toUpperCase(ch);
-			}
-			return '.';
-		}
 		public Builder dataFork(byte[] dataFork) {
+			Objects.requireNonNull(dataFork);
 			as.dataFork = dataFork;
 			return this;
 		}
 		public Builder resourceFork(byte[] resourceFork) {
+			Objects.requireNonNull(resourceFork);
 			as.resourceFork = resourceFork;
 			return this;
 		}
@@ -313,6 +295,7 @@ public class AppleSingle {
 			return this;
 		}
 		public Builder creationDate(Instant creation) {
+			Objects.requireNonNull(creation);
 			as.fileDatesInfo.creation = FileDatesInfo.fromInstant(creation);
 			return this;
 		}
@@ -321,6 +304,7 @@ public class AppleSingle {
 			return this;
 		}
 		public Builder modificationDate(Instant modification) {
+			Objects.requireNonNull(modification);
 			as.fileDatesInfo.modification = FileDatesInfo.fromInstant(modification);
 			return this;
 		}
@@ -329,6 +313,7 @@ public class AppleSingle {
 			return this;
 		}
 		public Builder backupDate(Instant backup) {
+			Objects.requireNonNull(backup);
 			as.fileDatesInfo.backup = FileDatesInfo.fromInstant(backup);
 			return this;
 		}
@@ -337,10 +322,12 @@ public class AppleSingle {
 			return this;
 		}
 		public Builder accessDate(Instant access) {
+			Objects.requireNonNull(access);
 			as.fileDatesInfo.access = FileDatesInfo.fromInstant(access);
 			return this;
 		}
 		public Builder allDates(Instant instant) {
+			Objects.requireNonNull(instant);
 			return creationDate(instant).modificationDate(instant).backupDate(instant).accessDate(instant);
 		}
 		public AppleSingle build() {

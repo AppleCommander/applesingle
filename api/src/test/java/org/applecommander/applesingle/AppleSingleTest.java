@@ -17,19 +17,14 @@
  */
 package org.applecommander.applesingle;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 public class AppleSingleTest {
 	private static final String AS_HELLO_BIN = "/hello.applesingle.bin";
@@ -63,7 +58,7 @@ public class AppleSingleTest {
 				.allDates(instant)
 				.build();
 		assertNotNull(createdAS);
-		assertEquals(realName.toUpperCase(), createdAS.getRealName());
+		assertEquals(realName, createdAS.getRealName());
 		assertArrayEquals(dataFork, createdAS.getDataFork());
 		assertNull(createdAS.getResourceFork());
 		assertNotNull(createdAS.getProdosFileInfo());
@@ -74,7 +69,7 @@ public class AppleSingleTest {
 		
 		AppleSingle readAS = AppleSingle.read(actualBytes.toByteArray());
 		assertNotNull(readAS);
-		assertEquals(realName.toUpperCase(), readAS.getRealName());
+		assertEquals(realName, readAS.getRealName());
 		assertArrayEquals(dataFork, readAS.getDataFork());
 		assertNull(readAS.getResourceFork());
 		assertNotNull(readAS.getProdosFileInfo());
@@ -83,24 +78,6 @@ public class AppleSingleTest {
 		assertEquals(instant, readAS.getFileDatesInfo().getModificationInstant());
 		assertEquals(instant, readAS.getFileDatesInfo().getAccessInstant());
 		assertEquals(instant, readAS.getFileDatesInfo().getBackupInstant());
-	}
-	
-	@Test
-	public void testProdosFileNameLengthRequirements() {
-		AppleSingle as = AppleSingle.builder().realName("superlongnamethatneedstobetruncated").build();
-		assertEquals(15, as.getRealName().length());
-	}
-	
-	@Test
-	public void testProdosFileNameCharacterRequirements() {
-		AppleSingle as = AppleSingle.builder().realName("bad-~@").build();
-		assertEquals("BAD...", as.getRealName());
-	}
-	
-	@Test(expected = IllegalArgumentException.class)
-	public void testProdosFileNameFirstCharacter() {
-		// Fails due to the first character being a digit.
-		AppleSingle.builder().realName("1st-file").build();
 	}
 	
 	@Test
